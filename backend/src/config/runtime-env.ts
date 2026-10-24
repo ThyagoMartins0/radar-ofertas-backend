@@ -25,6 +25,11 @@ function replaceLocalHostInUrl(url: string, dockerHost: string): string {
   return url.replace(/@(localhost|127\.0\.0\.1)(?=:|\/)/g, `@${dockerHost}`);
 }
 
+export function isUnresolvedPlaceholder(value: string | undefined): boolean {
+  if (!value) return false;
+  return /<[^>]+>/.test(value) || value.includes('Internal Host') || value.includes('a mesma senha');
+}
+
 /**
  * Monta DATABASE_URL a partir de MYSQL_* e corrige localhost dentro de containers.
  * Deve rodar antes de qualquer import do Prisma (`tsx --import ./backend/src/bootstrap-env.ts`).
@@ -51,5 +56,17 @@ export function applyRuntimeEnv(): void {
   if (inContainer && process.env.REDIS_URL) {
     const redisHost = process.env.REDIS_DOCKER_HOST?.trim() ?? 'redis';
     process.env.REDIS_URL = replaceLocalHostInUrl(process.env.REDIS_URL, redisHost);
+  }
+
+  if (
+    inContainer &&
+    (isUnresolvedPlaceholder(process.env.MYSQL_DOCKER_HOST) ||
+      isUnresolvedPlaceholder(process.env.MYSQL_PASSWORD) ||
+      isUnresolvedPlaceholder(process.env.REDIS_URL) ||
+      isUnresolvedPlaceholder(process.env.REDIS_DOCKER_HOST))
+  ) {
+    console.error(
+      '[bootstrap] MYSQL_DOCKER_HOST / REDIS_* ainda têm placeholder. Cole o Internal Host real do Dokploy.',
+    );
   }
 }

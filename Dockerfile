@@ -62,7 +62,7 @@ COPY docker ./docker
 RUN sed -i 's/\r$//' /app/docker/api-entrypoint.sh \
     && chmod +x /app/docker/api-entrypoint.sh
 
-EXPOSE 3001
+EXPOSE 80 3001
 
 ENTRYPOINT ["/app/docker/api-entrypoint.sh"]
 CMD ["npx", "tsx", "--import", "./backend/src/bootstrap-env.ts", "backend/api/server.ts"]

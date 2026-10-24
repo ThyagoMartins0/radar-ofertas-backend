@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
-import { applyRuntimeEnv } from './runtime-env.js';
+import { applyRuntimeEnv, isUnresolvedPlaceholder } from './runtime-env.js';
 
 describe('applyRuntimeEnv', () => {
   const keys = [
@@ -51,5 +51,10 @@ describe('applyRuntimeEnv', () => {
     process.env.NODE_ENV = 'development';
     applyRuntimeEnv();
     assert.equal(process.env.NODE_ENV, 'local');
+  });
+
+  it('detecta placeholder colado do guia', () => {
+    assert.equal(isUnresolvedPlaceholder('<Internal Host do MySQL>'), true);
+    assert.equal(isUnresolvedPlaceholder('ml-link02'), false);
   });
 });
