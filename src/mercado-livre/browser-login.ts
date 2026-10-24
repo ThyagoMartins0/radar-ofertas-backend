@@ -78,9 +78,12 @@ export async function launchMercadoLivreLoginBrowser(
   }
 
   try {
+    // Sem sinais de automação: o Google bloqueia "Entrar com Google" quando detecta navigator.webdriver.
     const browser = await chromium.launch({
       headless: false,
       env: buildPlaywrightLaunchEnv(),
+      ignoreDefaultArgs: ['--enable-automation'],
+      args: ['--disable-blink-features=AutomationControlled'],
     });
     return { browser, usesCdp: false };
   } catch (error) {
