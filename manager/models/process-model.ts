@@ -84,11 +84,25 @@ let collectorProc: ChildProcess | undefined;
 
 /** Sobe o collector (src/app.ts) se o painel pode spawnar e nenhum collector está vivo. */
 export async function ensureCollectorRunning(): Promise<void> {
-  if (!canManagerSpawnWorkers() || collectorProc) return;
+  if (!canManagerSpawnWorkers()) {
+    logger.info('[collector] MANAGER_CAN_SPAWN_WORKERS=false — collector deve rodar como app separado');
+    return;
+  }
+  if (collectorProc) {
+    logger.info({ pid: collectorProc.pid }, '[collector] Já iniciado por esta API');
+    return;
+  }
 
   const heartbeat = await getCollectorHeartbeat();
-  if (heartbeat && isProcessHeartbeatFresh(heartbeat)) return;
+  if (heartbeat && isProcessHeartbeatFresh(heartbeat)) {
+    logger.info(
+      { pid: heartbeat.pid, host: heartbeat.host, updatedAt: heartbeat.updatedAt },
+      '[collector] Outro collector ativo (heartbeat no Redis) — não iniciando outro',
+    );
+    return;
+  }
 
+  logger.info('[collector] Nenhum collector ativo — iniciando');
   const proc = spawnTsxScript(COLLECTOR_SCRIPT);
   collectorProc = proc;
 

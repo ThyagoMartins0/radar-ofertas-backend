@@ -29,6 +29,7 @@ async function main(): Promise<void> {
   await scheduleCollectorJob();
   await bootstrapCacheCoherence();
   const worker = startCollectorWorker();
+  logger.info({ pid: process.pid }, '[collector] Processo iniciado — caches carregados');
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down collector');

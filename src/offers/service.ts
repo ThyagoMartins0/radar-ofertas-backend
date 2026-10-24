@@ -218,9 +218,11 @@ async function collectPool(category: string): Promise<RawOffer[]> {
     // pertence, mesmo depois de os pools serem embaralhados juntos no sorteio.
     for (const offer of page) offer.sourceCategory = category;
     pool.push(...page);
+    logger.info({ category, page: pages + 1, offers: page.length }, '[busca] Página lida');
     if (++pages >= POOL_PAGES_PER_SOURCE) break;
   }
 
+  if (pages === 0) logger.warn({ category }, '[busca] Fonte não retornou nenhuma página');
   return pool;
 }
 
@@ -330,8 +332,14 @@ export async function orchestrateOfferCollection(
     : null;
   let jobs = 0;
 
+  logger.info(
+    { triggeredAt, channels, mlTagConfigured, productName, target },
+    '[busca] Orquestrando coleta',
+  );
+
   for (const channel of channels) {
     const categories = productSources ?? getActiveSourcesForChannel(channel);
+    logger.info({ channel, sources: categories }, '[busca] Fontes do canal');
     if (categories.length === 0) continue;
 
     const quota = Math.max(1, Math.floor(target / categories.length));
@@ -382,12 +390,19 @@ export async function collectFromSource(
 
   try {
     const pool = shuffle(await collectPool(category));
+    logger.info({ channel, category, poolSize: pool.length, quota }, '[busca] Ofertas lidas da fonte');
     for (const offer of pool) {
       if (enqueued >= quota) break;
       offer.sourceCategory = category;
       total++;
       const id = await processOffer(offer);
       if (id) enqueued++;
+    }
+    if (pool.length > 0 && enqueued === 0) {
+      logger.warn(
+        { channel, category, analisadas: total, minScore: getRuntimeScoreConfig().minScore },
+        '[busca] Nenhuma oferta aproveitada — todas abaixo do score mínimo ou já enviadas',
+      );
     }
   } catch (error) {
     logger.error({ channel, category, error }, 'Failed to collect from source');
@@ -418,6 +433,9 @@ export async function validateOfferCollectionReady(
     }
 
     const mlTagConfigured = await isMercadoLivreAffiliateTagConfigured();
+    if (!mlTagConfigured) {
+      logger.warn('[busca] Tag de afiliado ML vazia — só fontes Amazon serão coletadas');
+    }
     const hasCollectible = sources.some(
       (source) => isAmazonSourceUrl(source) || mlTagConfigured,
     );
@@ -429,6 +447,9 @@ export async function validateOfferCollectionReady(
   }
 
   const mlTagConfigured = await isMercadoLivreAffiliateTagConfigured();
+  if (!mlTagConfigured) {
+    logger.warn('[busca] Tag de afiliado ML vazia — fontes do Mercado Livre serão ignoradas');
+  }
   let collectibleSources = 0;
 
   for (const channel of channels) {

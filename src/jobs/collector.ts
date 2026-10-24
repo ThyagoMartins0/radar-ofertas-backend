@@ -90,8 +90,24 @@ export function startCollectorWorker(): Worker<CollectorJobData> {
     },
   );
 
+  worker.on('ready', () => {
+    logger.info({ queue: QUEUE_NAMES.OFFER_COLLECTOR }, '[collector] Pronto — aguardando jobs da fila');
+  });
+
+  worker.on('active', (job) => {
+    logger.info({ jobId: job.id, name: job.name, data: job.data }, '[collector] Job recebido');
+  });
+
+  worker.on('completed', (job, result) => {
+    logger.info({ jobId: job.id, name: job.name, result }, '[collector] Job concluído');
+  });
+
   worker.on('failed', (job, error) => {
     logger.error({ jobId: job?.id, error }, 'Collector job failed');
+  });
+
+  worker.on('error', (error) => {
+    logger.error({ error }, '[collector] Erro no worker BullMQ (conexão Redis?)');
   });
 
   return worker;

@@ -17,6 +17,7 @@ import { validateOfferCollectionReady } from '../../src/offers/service.js';
 import { estimatePendingSendTimes } from '../../src/queue/sender-schedule.js';
 import { enqueueOfferCollection } from '../../src/queue/index.js';
 import { isWithinOperatingHours } from '../../src/utils/datetime.js';
+import { logger } from '../../src/utils/logger.js';
 import { type DatabaseSnapshot, withDatabase } from './db-model.js';
 import { ensureCollectorRunning } from './process-model.js';
 import { getQueuesSnapshot, type QueuesSnapshot } from './queue-model.js';
@@ -155,15 +156,17 @@ export async function handleCollectOffers(
       return { error: blocker };
     }
 
-    await enqueueOfferCollection({
+    const jobId = await enqueueOfferCollection({
       force: true,
       productName: options.productName,
     });
+    logger.info({ jobId, productName: options.productName }, '[busca] Enfileirada para o collector');
     await ensureCollectorRunning();
     return { ok: true };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Falha ao enfileirar busca de anúncios';
+    logger.error({ error }, '[busca] Falha ao enfileirar');
     return { error: message };
   }
 }

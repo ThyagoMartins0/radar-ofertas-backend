@@ -151,11 +151,11 @@ export async function enqueueCollectSourceJob(data: CollectorSourceJobData): Pro
 
 export async function enqueueOfferCollection(
   options: { force?: boolean; productName?: string } = {},
-): Promise<void> {
+): Promise<string | undefined> {
   assertRedisEnabled('enfileiramento de coleta');
   const triggeredAt = new Date().toISOString();
   const productName = options.productName?.trim() || undefined;
-  await getCollectorQueue().add(
+  const job = await getCollectorQueue().add(
     'collect-orchestrate',
     {
       kind: 'orchestrate',
@@ -168,6 +168,7 @@ export async function enqueueOfferCollection(
       removeOnFail: 50,
     },
   );
+  return job.id;
 }
 
 export async function rescheduleCollectorJob(): Promise<void> {
