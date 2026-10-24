@@ -31,7 +31,13 @@ const envSchema = z
       .default('America/Sao_Paulo')
       .refine(isValidTimezone, { message: 'APP_TIMEZONE must be a valid IANA timezone' }),
     DATABASE_URL: z.string().url(),
-    REDIS_URL: z.string().min(1),
+    REDIS_URL: z
+      .string()
+      .min(1)
+      .refine((val) => URL.canParse(val), {
+        message:
+          'REDIS_URL inválida (placeholder não substituído?) — use redis://<Internal Host do Redis no Dokploy>:6379',
+      }),
     WHATSAPP_CHANNEL_ID: z.string().default(''),
     WHATSAPP_AUTH_PATH: z.string().default('./data/auth_info_baileys'),
     TELEGRAM_ENABLED: z
