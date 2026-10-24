@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import { readFileSync } from 'node:fs';
 
 import { env } from '../src/config/env.js';
+import { ApiError } from './errors/api-errors.js';
 import { registerErrorHandler } from './plugins/error-handler.js';
 import { registerApiRoutes } from './routes/index.js';
 
@@ -37,6 +38,23 @@ export async function buildApiApp() {
   });
 
   registerErrorHandler(app);
+
+  // PATCH/POST sem corpo (ex.: toggle) chegam sem Content-Type, mas às vezes com corpo vazio via proxy —
+  // sem este parser o Fastify responde 415. Corpo não vazio com tipo desconhecido continua 415.
+  app.addContentTypeParser('*', (_request, payload, done) => {
+    let size = 0;
+    payload.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+    });
+    payload.on('end', () => {
+      if (size === 0) {
+        done(null, undefined);
+        return;
+      }
+      done(new ApiError(415, 'UNSUPPORTED_MEDIA_TYPE', 'Envie o corpo como application/json'), undefined);
+    });
+    payload.on('error', (error) => done(error, undefined));
+  });
 
   await app.register(rateLimit, {
     global: false,

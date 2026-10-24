@@ -25,6 +25,16 @@ export function registerErrorHandler(app: FastifyInstance): void {
       return;
     }
 
+    // Erros 4xx do próprio Fastify (415, JSON malformado…) são do cliente — não viram 500.
+    const statusCode = (error as { statusCode?: number }).statusCode;
+    if (statusCode !== undefined && statusCode >= 400 && statusCode < 500) {
+      reply.status(statusCode).send({
+        error: (error as Error).message,
+        code: (error as { code?: string }).code ?? 'BAD_REQUEST',
+      });
+      return;
+    }
+
     // request.log é no-op (Fastify com logger: false) — usa o logger da app para aparecer no Dokploy.
     logger.error({ err: error, method: request.method, url: request.url }, 'Erro não tratado na API');
     reply.status(500).send({
