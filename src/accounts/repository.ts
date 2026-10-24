@@ -29,10 +29,11 @@ export function resolveAccountAuthPath(accountId: string, platform: AccountPlatf
   if (accountId === DEFAULT_ACCOUNT_ID) {
     if (platform === 'whatsapp') return env.WHATSAPP_AUTH_PATH;
     if (platform === 'mercado_livre') return env.ML_AUTH_PATH;
-    return path.join(DATA_ROOT, 'accounts', accountId, platform);
+    return path.posix.join(DATA_ROOT, 'accounts', accountId, platform);
   }
 
-  return path.join(DATA_ROOT, 'accounts', accountId, platform);
+  // posix: o auth_path é chave em ml_sessions — login local no Windows precisa gerar o mesmo valor do servidor.
+  return path.posix.join(DATA_ROOT, 'accounts', accountId, platform);
 }
 
 export function resolveAccountsDataRoot(): string {
