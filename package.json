@@ -18,6 +18,7 @@
     "migrate:deploy": "tsx --import ./src/bootstrap-env.ts src/scripts/migrate-deploy.ts",
     "prisma:generate": "prisma generate",
     "ml:login": "tsx --env-file=.env src/ml-login.ts",
+    "ml:login:local": "tsx --env-file=.env src/ml-login-local.ts",
     "wa:login": "tsx --env-file=.env src/wa-login.ts",
     "wa:channel": "tsx --env-file=.env src/wa-channel.ts",
     "wa:destination": "tsx --env-file=.env src/wa-destination.ts",
