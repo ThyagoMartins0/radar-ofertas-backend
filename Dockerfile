@@ -57,16 +57,21 @@ ENV NODE_ENV=production \
     MANAGER_VNC_ENABLED=false \
     APP_TIMEZONE=America/Sao_Paulo \
     API_CORS_ORIGINS=https://rdofertas.simplapp.com.br \
+    JWT_ACCESS_EXPIRES_IN=15m \
+    JWT_REFRESH_EXPIRES_IN=1h \
+    API_ADMIN_USERNAME=admin \
     MYSQL_DOCKER_HOST=13.140.228.143 \
     MYSQL_PORT=3560 \
     MYSQL_USER=mlu-s-db-link@ \
     MYSQL_DATABASE=ml-db-link-banco \
-    REDIS_ENABLED=false \
+    REDIS_ENABLED=true \
     REDIS_URL=redis://redis:6379 \
+    REDIS_DOCKER_HOST=redis \
     WHATSAPP_AUTH_PATH=/app/data/auth_info_baileys \
     ML_AUTH_PATH=/app/data/ml_auth
 
-# Segredos (MYSQL_PASSWORD, JWT_SECRET, API_ADMIN_PASSWORD) ficam no Environment do Dokploy.
+# Repositório público: segredos (MYSQL_PASSWORD, JWT_SECRET, API_ADMIN_PASSWORD) ficam SÓ no Environment do Dokploy.
+# Variáveis do Environment do Dokploy sobrescrevem os ENV acima.
 
 RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/BUILD_TIME
 
