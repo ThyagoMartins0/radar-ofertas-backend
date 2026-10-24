@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { hostname } from 'node:os';
 
 import { CHANNELS } from '../../src/channels/types.js';
@@ -150,7 +151,9 @@ export async function startSenderWorker(): Promise<WorkerState> {
   workerSlot.detail = null;
   workerSlot.startedAt = new Date().toISOString();
 
-  const proc = spawn('npx', ['tsx', '--env-file=.env', WORKER_SCRIPT], {
+  // No container não há .env (variáveis vêm do Dokploy e são herdadas via process.env).
+  const envFileArgs = existsSync('.env') ? ['--env-file=.env'] : [];
+  const proc = spawn('npx', ['tsx', '--import', './src/bootstrap-env.ts', ...envFileArgs, WORKER_SCRIPT], {
     cwd: process.cwd(),
     env: process.env,
     shell: isWindows,
