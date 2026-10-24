@@ -87,4 +87,4 @@ ENTRYPOINT ["/app/docker/api-entrypoint.sh"]
 CMD ["npx", "tsx", "--import", "./src/bootstrap-env.ts", "api/server.ts"]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.API_PORT||3001)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node /app/docker/healthcheck.cjs
