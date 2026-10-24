@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 
+import { logger } from '../../src/utils/logger.js';
 import { ApiError } from '../errors/api-errors.js';
 
 const MAX_BODY_BYTES = 1_048_576;
@@ -24,7 +25,8 @@ export function registerErrorHandler(app: FastifyInstance): void {
       return;
     }
 
-    request.log.error({ err: error }, 'Erro não tratado na API');
+    // request.log é no-op (Fastify com logger: false) — usa o logger da app para aparecer no Dokploy.
+    logger.error({ err: error, method: request.method, url: request.url }, 'Erro não tratado na API');
     reply.status(500).send({
       error: 'Erro interno do servidor',
       code: 'INTERNAL_ERROR',

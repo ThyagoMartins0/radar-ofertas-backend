@@ -312,10 +312,10 @@ function originWhere(origin: OfferOriginFilter = 'all'): Prisma.OfferWhereInput 
   if (origin === 'amazon') {
     return {
       OR: [
-        { permalink: { contains: 'amazon', mode: 'insensitive' } },
+        { permalink: { contains: 'amazon' } },
         {
           AND: [
-            { NOT: { mercadoLivreId: { startsWith: 'MLB', mode: 'insensitive' } } },
+            { NOT: { mercadoLivreId: { startsWith: 'MLB' } } },
             { NOT: { mercadoLivreId: { startsWith: 'mlb' } } },
             { permalink: { equals: null } },
           ],
@@ -326,9 +326,9 @@ function originWhere(origin: OfferOriginFilter = 'all'): Prisma.OfferWhereInput 
   if (origin === 'mercado_livre') {
     return {
       OR: [
-        { mercadoLivreId: { startsWith: 'MLB', mode: 'insensitive' } },
-        { permalink: { contains: 'mercadolivre', mode: 'insensitive' } },
-        { permalink: { contains: 'mercadolibre', mode: 'insensitive' } },
+        { mercadoLivreId: { startsWith: 'MLB' } },
+        { permalink: { contains: 'mercadolivre' } },
+        { permalink: { contains: 'mercadolibre' } },
       ],
     };
   }
