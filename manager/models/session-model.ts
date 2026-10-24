@@ -1,3 +1,4 @@
+import { isMercadoLivreAffiliateTagConfigured } from '../../src/accounts/ml-affiliate-tag.js';
 import { findAccount } from '../../src/accounts/repository.js';
 import { getTelegramIntegration, isTelegramIntegrationEnabled } from '../../src/channels/integration-state.js';
 import { env } from '../../src/config/env.js';
@@ -51,8 +52,17 @@ async function buildMercadoLivreSessionStatus(): Promise<SessionStatus> {
   return { label: 'Mercado Livre', ok: valid, detail };
 }
 
+/** Card de Integrações: sessão válida sem tag de afiliado não coleta nada — não pode mostrar OK. */
 export async function getMercadoLivreSessionStatus(): Promise<SessionStatus> {
-  return buildMercadoLivreSessionStatus();
+  const status = await buildMercadoLivreSessionStatus();
+  if (status.ok && !(await isMercadoLivreAffiliateTagConfigured())) {
+    return {
+      ...status,
+      ok: false,
+      detail: 'Sessão salva, mas sem tag de afiliado — configure em Contas → Mercado Livre',
+    };
+  }
+  return status;
 }
 
 export async function getMercadoLivreSessionStatusForAuthPath(authPath: string): Promise<SessionStatus> {
