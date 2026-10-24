@@ -18,6 +18,7 @@ import { estimatePendingSendTimes } from '../../src/queue/sender-schedule.js';
 import { enqueueOfferCollection } from '../../src/queue/index.js';
 import { isWithinOperatingHours } from '../../src/utils/datetime.js';
 import { type DatabaseSnapshot, withDatabase } from './db-model.js';
+import { ensureCollectorRunning } from './process-model.js';
 import { getQueuesSnapshot, type QueuesSnapshot } from './queue-model.js';
 import {
   getMercadoLivreSessionStatus,
@@ -158,6 +159,7 @@ export async function handleCollectOffers(
       force: true,
       productName: options.productName,
     });
+    await ensureCollectorRunning();
     return { ok: true };
   } catch (error) {
     const message =

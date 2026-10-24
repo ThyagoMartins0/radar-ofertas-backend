@@ -3,6 +3,7 @@ import { createServer, type Server } from 'node:http';
 import { env } from '../src/config/env.js';
 import { bootstrapCacheCoherence } from '../src/utils/config-cache-sync.js';
 import { hydrateIntegrationState } from '../src/channels/integration-state.js';
+import { ensureCollectorRunning } from '../manager/models/process-model.js';
 import { logger } from '../src/utils/logger.js';
 import { buildApiApp, type ApiApp } from './app.js';
 import { shutdownApi } from './lib/shutdown.js';
@@ -62,6 +63,10 @@ export async function startApiServer(): Promise<ApiApp> {
 
   void bootstrapCacheCoherence();
   void hydrateIntegrationState();
+  // Container único (MANAGER_CAN_SPAWN_WORKERS=true): o collector roda junto com a API.
+  void ensureCollectorRunning().catch((error) => {
+    logger.warn({ err: error }, 'Não foi possível iniciar o collector');
+  });
 
   return app;
 }
