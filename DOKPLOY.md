@@ -11,6 +11,20 @@
 
 O `Dockerfile` da raiz sobe a **API REST**. O collector não escuta HTTP — se o command padrão antigo (`app.ts`) estiver no ar, o Traefik devolve 502.
 
+## Worker de envio (WhatsApp / Telegram)
+
+O QR do WhatsApp e o envio de ofertas **não rodam dentro da API**. É obrigatório um **segundo app** no Dokploy (mesma imagem/Dockerfile, **sem domínio HTTP**):
+
+| Campo | Valor |
+|--------|--------|
+| Command | `npx tsx --import ./src/bootstrap-env.ts src/worker.ts` |
+| Environment | Igual ao backend (mesmo `REDIS_*`, `MYSQL_*`, `WHATSAPP_AUTH_PATH`, volume `/app/data` compartilhado com a API) |
+| Volume | Montar o mesmo diretório de dados da API (`auth_info_baileys`, credenciais ML) |
+
+Sem esse processo, o painel fica em **“Aguardando worker de envio…”** e o status/QR não aparecem.
+
+Opcional: apps separados para `src/app.ts` (collector) e `src/scheduler.ts` (agendador).
+
 ## Domain
 
 | Campo | Valor |

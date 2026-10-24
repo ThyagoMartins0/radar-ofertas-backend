@@ -10,7 +10,8 @@ import {
 import { setMlAuthPath } from '../../src/mercado-livre/session.js';
 import { DEFAULT_ACCOUNT_ID } from '../../src/accounts/types.js';
 import { resolveNovncPort } from '../../src/config/novnc.js';
-import { getWhatsAppConnectFromRedis } from '../../src/utils/redis-state.js';
+import { getWhatsAppConnectFromRedis, publishWhatsAppConnectState } from '../../src/utils/redis-state.js';
+import { requestWhatsAppConnect } from '../../src/whatsapp/connect-rpc.js';
 import { logger } from '../../src/utils/logger.js';
 import { canManagerSpawnWorkers, getSenderWorkerState, startWorker } from './process-model.js';
 
@@ -40,6 +41,11 @@ export async function getWhatsAppConnectionState(accountId?: string): Promise<Wh
     return { status: redisState.status, qr: redisState.qr, error: redisState.error };
   }
 
+  const worker = await getSenderWorkerState();
+  if (worker.status === 'running' || worker.status === 'starting') {
+    return { status: 'connecting', qr: null, error: null };
+  }
+
   return { status: 'idle', qr: null, error: null };
 }
 
@@ -54,28 +60,42 @@ export async function startWhatsAppConnection(accountId?: string): Promise<Whats
     return current;
   }
 
+  const workerHint =
+    'Aguardando worker de envio… Se persistir, confira o serviço worker no Docker/Dokploy.';
+
   if (canManagerSpawnWorkers()) {
     const worker = await getSenderWorkerState();
     if (worker.status !== 'running' && worker.status !== 'starting') {
       await startWorker();
     }
+    await publishWhatsAppConnectState(activeWaAccountId, {
+      status: 'connecting',
+      qr: null,
+      error: null,
+    });
+    void requestWhatsAppConnect(activeWaAccountId);
     const after = await getWhatsAppConnectionState(activeWaAccountId);
     return after.status === 'idle' ? { status: 'connecting', qr: null, error: null } : after;
   }
 
   const worker = await getSenderWorkerState();
-  if (worker.status !== 'running') {
-    // Em Docker o heartbeat só existe com o worker no ar. Se o Redis ainda não
-    // tem QR, devolvemos connecting para o painel continuar o poll — o erro duro
-    // impedia ver o QR que o worker publicava segundos depois.
-    return {
-      status: 'connecting',
-      qr: null,
-      error: 'Aguardando worker de envio… Se persistir, confira o serviço worker no Docker.',
-    };
+  const workerError = worker.status !== 'running' ? workerHint : null;
+
+  await publishWhatsAppConnectState(activeWaAccountId, {
+    status: 'connecting',
+    qr: null,
+    error: workerError,
+  });
+
+  if (worker.status === 'running') {
+    void requestWhatsAppConnect(activeWaAccountId);
   }
 
-  return { status: 'connecting', qr: null, error: null };
+  return {
+    status: 'connecting',
+    qr: null,
+    error: workerError,
+  };
 }
 
 // --- Mercado Livre connection flow -------------------------------------------

@@ -11,6 +11,7 @@ import { hydrateCouponTemplateCache } from '../offers/coupon-template.js';
 import { hydrateTemplateCache } from '../offers/message-template.js';
 import { closeAllQueues, resetAndRequeuePendingSenderJobs, reconcilePendingOfferSendJobs, type SenderJobData } from '../queue/index.js';
 import { bootstrapCacheCoherence } from '../utils/config-cache-sync.js';
+import { startWhatsAppConnectListener } from '../whatsapp/connect-rpc.js';
 import { startWhatsAppInviteResolveListener } from '../whatsapp/invite-resolve-rpc.js';
 import { hydrateIntegrationState } from '../channels/integration-state.js';
 import { logger } from '../utils/logger.js';
@@ -139,6 +140,7 @@ export async function runUnifiedWorker(): Promise<void> {
   await runPendingSendReconcile('worker-startup', true);
 
   const hasWhatsApp = active.some(({ publisher }) => publisher.channel === 'whatsapp');
+  const stopConnectListener = hasWhatsApp ? startWhatsAppConnectListener() : null;
   const stopInviteResolveListener = hasWhatsApp ? startWhatsAppInviteResolveListener() : null;
 
   const reconcileTimer = setInterval(() => {
@@ -149,6 +151,7 @@ export async function runUnifiedWorker(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Shutting down unified sender worker');
     clearInterval(reconcileTimer);
+    stopConnectListener?.();
     stopInviteResolveListener?.();
     for (const entry of active) {
       entry.stopHeartbeat();
