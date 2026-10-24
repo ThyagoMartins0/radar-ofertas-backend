@@ -4,12 +4,18 @@ import { hostname } from 'node:os';
 
 import { CHANNELS } from '../../src/channels/types.js';
 import { env } from '../../src/config/env.js';
-import { getWorkerHeartbeat, isWorkerHeartbeatFresh } from '../../src/utils/redis-state.js';
+import {
+  getCollectorHeartbeat,
+  getWorkerHeartbeat,
+  isProcessHeartbeatFresh,
+  isWorkerHeartbeatFresh,
+} from '../../src/utils/redis-state.js';
 import { logger } from '../../src/utils/logger.js';
 
 const SPAWN_DISABLED_DETAIL =
   'Worker gerenciado externamente — use Docker ou npm run worker no terminal.';
 const WORKER_SCRIPT = 'src/worker.ts';
+const COLLECTOR_SCRIPT = 'src/app.ts';
 
 export function canManagerSpawnWorkers(): boolean {
   return env.MANAGER_CAN_SPAWN_WORKERS;
@@ -58,6 +64,44 @@ interface WorkerSlot {
 }
 
 let workerSlot: WorkerSlot = { status: 'stopped', startedAt: null, detail: null };
+
+function spawnTsxScript(script: string): ChildProcess {
+  // No container não há .env (variáveis vêm do Dokploy e são herdadas via process.env).
+  const envFileArgs = existsSync('.env') ? ['--env-file=.env'] : [];
+  return spawn('npx', ['tsx', '--import', './src/bootstrap-env.ts', ...envFileArgs, script], {
+    cwd: process.cwd(),
+    env: process.env,
+    shell: isWindows,
+    detached: !isWindows,
+    stdio: 'inherit',
+  });
+}
+
+// --- Collector (busca de ofertas) ---------------------------------------------
+// Sem um processo consumindo a fila do collector, "Buscar" só enfileira e nada acontece.
+
+let collectorProc: ChildProcess | undefined;
+
+/** Sobe o collector (src/app.ts) se o painel pode spawnar e nenhum collector está vivo. */
+export async function ensureCollectorRunning(): Promise<void> {
+  if (!canManagerSpawnWorkers() || collectorProc) return;
+
+  const heartbeat = await getCollectorHeartbeat();
+  if (heartbeat && isProcessHeartbeatFresh(heartbeat)) return;
+
+  const proc = spawnTsxScript(COLLECTOR_SCRIPT);
+  collectorProc = proc;
+
+  proc.on('spawn', () => logger.info({ pid: proc.pid }, 'Collector iniciado pelo painel'));
+  proc.on('error', (error) => {
+    if (collectorProc === proc) collectorProc = undefined;
+    logger.error({ error }, 'Falha ao iniciar collector pelo painel');
+  });
+  proc.on('exit', (code, signal) => {
+    if (collectorProc === proc) collectorProc = undefined;
+    logger.info({ code, signal }, 'Collector encerrado');
+  });
+}
 
 export function workerDomPrefix(): string {
   return 'worker';
@@ -151,15 +195,7 @@ export async function startSenderWorker(): Promise<WorkerState> {
   workerSlot.detail = null;
   workerSlot.startedAt = new Date().toISOString();
 
-  // No container não há .env (variáveis vêm do Dokploy e são herdadas via process.env).
-  const envFileArgs = existsSync('.env') ? ['--env-file=.env'] : [];
-  const proc = spawn('npx', ['tsx', '--import', './src/bootstrap-env.ts', ...envFileArgs, WORKER_SCRIPT], {
-    cwd: process.cwd(),
-    env: process.env,
-    shell: isWindows,
-    detached: !isWindows,
-    stdio: 'inherit',
-  });
+  const proc = spawnTsxScript(WORKER_SCRIPT);
   workerSlot.proc = proc;
 
   proc.on('spawn', () => {
