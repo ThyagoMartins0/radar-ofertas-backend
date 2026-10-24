@@ -6,18 +6,16 @@ import { env } from '../src/config/env.js';
 import { registerErrorHandler } from './plugins/error-handler.js';
 import { registerApiRoutes } from './routes/index.js';
 
-const DEFAULT_DEV_ORIGINS = [
+const DEFAULT_PANEL_ORIGINS = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'https://rdofertas.simplapp.com.br',
 ];
 
 function resolveCorsOrigins(): string[] {
-  if (env.API_CORS_ORIGINS.length > 0) {
-    return env.API_CORS_ORIGINS;
-  }
-  return DEFAULT_DEV_ORIGINS;
+  return [...new Set([...DEFAULT_PANEL_ORIGINS, ...env.API_CORS_ORIGINS])];
 }
 
 export async function buildApiApp() {

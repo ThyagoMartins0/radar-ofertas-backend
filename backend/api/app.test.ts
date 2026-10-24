@@ -20,4 +20,23 @@ describe('API probe', () => {
 
     await app.close();
   });
+
+  it('OPTIONS /api/v1/auth/login permite o painel público', async () => {
+    setEnvForTest(buildTestEnv());
+    const app = await buildApiApp();
+
+    const response = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/v1/auth/login',
+      headers: {
+        origin: 'https://rdofertas.simplapp.com.br',
+        'access-control-request-method': 'POST',
+      },
+    });
+
+    assert.equal(response.statusCode, 204);
+    assert.equal(response.headers['access-control-allow-origin'], 'https://rdofertas.simplapp.com.br');
+
+    await app.close();
+  });
 });
