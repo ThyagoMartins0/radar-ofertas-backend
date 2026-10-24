@@ -1,5 +1,6 @@
-# Imagem backend (alias para docker/Dockerfile.backend — `docker build .` na raiz).
-# Serviços: collector, scheduler, worker, migrate, api.
+# syntax=docker/dockerfile:1
+# Dokploy: context = raiz | este Dockerfile | Container Port = 3001
+# Sobe a API REST. Collector/worker/scheduler usam docker-compose (outro command).
 
 FROM node:22-bookworm-slim AS base
 
@@ -48,11 +49,23 @@ RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.co
 
 FROM deps AS backend
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    RUNNING_IN_DOCKER=1 \
+    API_PORT=3001 \
+    SKIP_MIGRATIONS=true \
+    MANAGER_CAN_SPAWN_WORKERS=false \
+    MANAGER_VNC_ENABLED=false
 
 COPY backend ./backend
 COPY docker ./docker
 
-RUN chmod +x /app/docker/api-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker/api-entrypoint.sh \
+    && chmod +x /app/docker/api-entrypoint.sh
 
-CMD ["npx", "tsx", "backend/src/app.ts"]
+EXPOSE 3001
+
+ENTRYPOINT ["/app/docker/api-entrypoint.sh"]
+CMD ["npx", "tsx", "--import", "./backend/src/bootstrap-env.ts", "backend/api/server.ts"]
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.API_PORT||3001)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

@@ -28,7 +28,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-API: **http://localhost:3001** — `GET /api/v1/health`
+API: **http://localhost:3001** — `GET /` (probe) e `GET /api/v1/health`
+
+Dokploy: ver [DOKPLOY.md](./DOKPLOY.md). Container Port = **3001**.
 
 Dev com hot reload de código:
 

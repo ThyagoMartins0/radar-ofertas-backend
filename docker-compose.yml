@@ -12,8 +12,11 @@ x-app-environment: &app-environment
   APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
   REDIS_ENABLED: "true"
   TELEGRAM_ENABLED: "false"
-  DATABASE_URL: mysql://${MYSQL_USER:-radar}:${MYSQL_PASSWORD:-radar_secret}@mysql:3306/${MYSQL_DATABASE:-radar_ofertas}
+  # DATABASE_URL: montada por backend/src/bootstrap-env.ts a partir de MYSQL_*
   REDIS_URL: redis://redis:6379
+  MYSQL_DOCKER_HOST: ${MYSQL_DOCKER_HOST:-mysql}
+  REDIS_DOCKER_HOST: redis
+  RUNNING_IN_DOCKER: "1"
   WHATSAPP_AUTH_PATH: /app/data/auth_info_baileys
   ML_AUTH_PATH: /app/data/ml_auth
   ML_USE_BROWSER_FALLBACK: ${ML_USE_BROWSER_FALLBACK:-true}
@@ -30,6 +33,8 @@ x-app-base: &app-base
     - .env
   environment:
     <<: *app-environment
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   volumes:
     - ./data:/app/data
   depends_on:
@@ -93,14 +98,24 @@ services:
       - .env
     environment:
       <<: *app-environment
-    command: ["npm", "run", "migrate:deploy"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      ["npx", "tsx", "--import", "./backend/src/bootstrap-env.ts", "backend/src/scripts/migrate-deploy.ts"]
     depends_on:
       mysql:
         condition: service_healthy
 
   collector:
     <<: *app-base
-    command: ["npx", "tsx", "backend/src/app.ts"]
+    command:
+      [
+        "npx",
+        "tsx",
+        "--import",
+        "./backend/src/bootstrap-env.ts",
+        "backend/src/app.ts",
+      ]
     environment:
       <<: *app-environment
       SKIP_MIGRATIONS: "true"
@@ -110,7 +125,14 @@ services:
 
   scheduler:
     <<: *app-base
-    command: ["npx", "tsx", "backend/src/scheduler.ts"]
+    command:
+      [
+        "npx",
+        "tsx",
+        "--import",
+        "./backend/src/bootstrap-env.ts",
+        "backend/src/scheduler.ts",
+      ]
     environment:
       <<: *app-environment
       SKIP_MIGRATIONS: "true"
@@ -120,7 +142,14 @@ services:
 
   worker:
     <<: *app-base
-    command: ["npx", "tsx", "backend/src/worker.ts"]
+    command:
+      [
+        "npx",
+        "tsx",
+        "--import",
+        "./backend/src/bootstrap-env.ts",
+        "backend/src/worker.ts",
+      ]
     environment:
       <<: *app-environment
       SKIP_MIGRATIONS: "true"
@@ -132,7 +161,14 @@ services:
   api:
     <<: *app-base
     entrypoint: ["/app/docker/api-entrypoint.sh"]
-    command: ["npx", "tsx", "backend/api/server.ts"]
+    command:
+      [
+        "npx",
+        "tsx",
+        "--import",
+        "./backend/src/bootstrap-env.ts",
+        "backend/api/server.ts",
+      ]
     ports:
       - "${API_PORT:-3001}:3001"
       - "${MANAGER_NOVNC_PORT:-6080}:${MANAGER_NOVNC_PORT:-6080}"

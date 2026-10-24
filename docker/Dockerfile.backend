@@ -55,6 +55,9 @@ ENV NODE_ENV=production
 COPY backend ./backend
 COPY docker ./docker
 
-RUN chmod +x /app/docker/api-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker/api-entrypoint.sh \
+    && chmod +x /app/docker/api-entrypoint.sh
 
-CMD ["npx", "tsx", "backend/src/app.ts"]
+EXPOSE 3001
+
+CMD ["npx", "tsx", "--import", "./backend/src/bootstrap-env.ts", "backend/src/app.ts"]

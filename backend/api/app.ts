@@ -53,6 +53,12 @@ export async function buildApiApp() {
     { prefix: '/api/v1' },
   );
 
+  // Probe do proxy (Dokploy/Coolify healthcheck em GET /). Sem banco.
+  app.get('/', async () => ({
+    status: 'ok' as const,
+    service: 'radar-ofertas-api',
+  }));
+
   return app;
 }
 
