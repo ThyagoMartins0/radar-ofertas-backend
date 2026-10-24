@@ -3,23 +3,32 @@ import { randomBytes } from 'node:crypto';
 import { Redis } from 'ioredis';
 
 import { env } from '../../src/config/env.js';
+import { logger } from '../../src/utils/logger.js';
 
 const REFRESH_TOKEN_PREFIX = 'radar:auth:refresh:';
 
 let redisClient: Redis | null = null;
-let redisFailed = false;
+
+function redisHostForLog(): string {
+  try {
+    return new URL(env.REDIS_URL).host;
+  } catch {
+    return 'REDIS_URL inválida';
+  }
+}
 
 function getRedis(): Redis | null {
-  if (!env.REDIS_ENABLED || redisFailed) return null;
+  if (!env.REDIS_ENABLED) return null;
   if (!redisClient) {
     redisClient = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
       enableOfflineQueue: false,
+      connectTimeout: 5000,
+      // Sem reconexão automática: cada requisição recria o cliente se a conexão caiu.
+      retryStrategy: () => null,
     });
-    redisClient.on('error', () => {
-      redisFailed = true;
-    });
+    redisClient.on('error', () => undefined);
   }
   return redisClient;
 }
@@ -30,8 +39,13 @@ async function ensureConnected(redis: Redis): Promise<boolean> {
       await redis.connect();
     }
     return true;
-  } catch {
-    redisFailed = true;
+  } catch (error) {
+    logger.error(
+      { err: error, redisHost: redisHostForLog() },
+      'Falha ao conectar no Redis (refresh tokens) — confira REDIS_URL no Environment do Dokploy',
+    );
+    redis.disconnect();
+    if (redisClient === redis) redisClient = null;
     return false;
   }
 }
@@ -76,7 +90,6 @@ export async function closeRefreshTokenStore(): Promise<void> {
   if (!redisClient) return;
   await redisClient.quit().catch(() => undefined);
   redisClient = null;
-  redisFailed = false;
 }
 
 /** Converte strings como 1h, 15m, 30s em segundos. */
