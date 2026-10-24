@@ -7,3 +7,4 @@ test-results/
 playwright-report/
 blob-report/
 auth_info_baileys
+.env
