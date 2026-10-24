@@ -21,6 +21,7 @@ export function buildTestEnv(overrides: Partial<Env> = {}): Env {
     ML_USE_BROWSER_FALLBACK: true,
     ML_BROWSER_HEADLESS: true,
     ML_LOGIN_CDP_URL: '',
+    ML_SESSION_STORE: 'file',
     ML_HTTP_TIMEOUT_MS: 30_000,
     ML_COUPONS_URL: 'https://www.mercadolivre.com.br/afiliados/coupons#hub',
     AMAZON_BASE_URL: 'https://www.amazon.com.br/',

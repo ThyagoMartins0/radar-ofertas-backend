@@ -1,6 +1,6 @@
 import { telegramPublisher } from '../channels/telegram-publisher.js';
 import { env } from '../config/env.js';
-import { prisma } from '../database/client.js';
+import { closeDatabase, pingDatabase, query } from '../database/client.js';
 import { buildMlCategoryRows, hydrateMlSourcesCache } from '../config/ml-sources-config.js';
 import {
   buildAmazonSourceRows,
@@ -41,7 +41,7 @@ function databaseFixHint(message: string): string {
 
 async function checkDatabase(): Promise<PreflightItem> {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await pingDatabase();
     return { ok: true, label: 'MySQL', detail: maskUrl(env.DATABASE_URL) };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -56,20 +56,20 @@ async function checkDatabase(): Promise<PreflightItem> {
 
 async function checkOfferDeliverySchema(): Promise<PreflightItem> {
   try {
-    const rows = await prisma.$queryRaw<Array<{ column_name: string }>>`
+    const rows = await query<{ column_name: string }>(`
       SELECT COLUMN_NAME AS column_name
       FROM information_schema.columns
       WHERE table_schema = DATABASE()
         AND table_name = 'offer_deliveries'
         AND column_name = 'account_id'
-    `;
+    `);
 
     if (rows.length === 0) {
       return {
         ok: false,
         label: 'Schema do banco',
         detail: 'Migração pendente: coluna account_id ausente em offer_deliveries',
-        fix: 'Pare o bot (Ctrl+C), rode npm run migrate:deploy e depois npm run prisma:generate',
+        fix: 'Pare o bot (Ctrl+C) e rode npm run migrate:deploy',
       };
     }
 
@@ -254,19 +254,19 @@ async function checkAmazonSources(): Promise<PreflightItem> {
 
 async function checkUsersTable(): Promise<PreflightItem> {
   try {
-    const rows = await prisma.$queryRaw<Array<{ table_name: string }>>`
+    const rows = await query<{ table_name: string }>(`
       SELECT TABLE_NAME AS table_name
       FROM information_schema.tables
       WHERE table_schema = DATABASE()
         AND table_name = 'users'
-    `;
+    `);
 
     if (rows.length === 0) {
       return {
         ok: false,
         label: 'Tabela users',
         detail: 'Migração pendente: tabela users ausente',
-        fix: 'Rode npm run migrate:deploy e npm run prisma:generate',
+        fix: 'Rode npm run migrate:deploy',
       };
     }
 
@@ -362,7 +362,6 @@ export function printPreflight(items: PreflightItem[]): void {
 export function printSetupGuide(): void {
   console.log('═══ Setup completo (rode na ordem) ═══\n');
   console.log('  npm install');
-  console.log('  npm run prisma:generate');
   console.log('  npm run migrate:deploy');
   console.log('  npm run ml:login          # login afiliado ML');
   console.log('  npm run wa:login          # QR code WhatsApp');
@@ -426,6 +425,6 @@ if (isDirectRun) {
     })
     .finally(async () => {
       await closeAllQueues();
-      await prisma.$disconnect();
+      await closeDatabase();
     });
 }

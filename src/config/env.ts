@@ -74,6 +74,8 @@ const envSchema = z
       .transform((val) => val === 'true' || val === '1'),
     /** Chrome do host com --remote-debugging-port — login ML pelo painel no Docker. */
     ML_LOGIN_CDP_URL: z.string().default(''),
+    /** Onde a sessão ML (cookies) é salva: database = tabela ml_sessions; file = ML_AUTH_PATH. */
+    ML_SESSION_STORE: z.enum(['database', 'file']).default('database'),
     ML_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     ML_COUPONS_URL: z
       .string()

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { CHANNELS, type Channel } from '../channels/types.js';
 import { env } from './env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 import {
   validateCategoryConfig,
   type CategoryListingKind,
@@ -231,8 +231,8 @@ export function buildMlCategoryRows(): MlCategoryRow[] {
 export async function hydrateMlSourcesCache(): Promise<void> {
   try {
     const [sourcesRow, flagsRow] = await Promise.all([
-      prisma.setting.findUnique({ where: { key: SETTING_KEY } }),
-      prisma.setting.findUnique({ where: { key: ENV_FLAGS_KEY } }),
+      findSetting(SETTING_KEY),
+      findSetting(ENV_FLAGS_KEY),
     ]);
     sourcesCache = sourcesRow ? parseSourcesFromJson(sourcesRow.value) : [];
     envFlagsCache = flagsRow ? parseEnvFlagsFromJson(flagsRow.value) : {};
@@ -244,11 +244,7 @@ export async function hydrateMlSourcesCache(): Promise<void> {
 
 async function persistCustomSources(sources: MlCustomSource[]): Promise<void> {
   const json = JSON.stringify(sources);
-  await prisma.setting.upsert({
-    where: { key: SETTING_KEY },
-    update: { value: json },
-    create: { key: SETTING_KEY, value: json },
-  });
+  await upsertSetting(SETTING_KEY, json);
   sourcesCache = sources;
   const { notifyConfigCacheChange } = await import('../utils/config-cache-sync.js');
   await notifyConfigCacheChange('ml-sources');
@@ -256,11 +252,7 @@ async function persistCustomSources(sources: MlCustomSource[]): Promise<void> {
 
 async function persistEnvFlags(flags: Record<string, Channel[]>): Promise<void> {
   const json = JSON.stringify(flags);
-  await prisma.setting.upsert({
-    where: { key: ENV_FLAGS_KEY },
-    update: { value: json },
-    create: { key: ENV_FLAGS_KEY, value: json },
-  });
+  await upsertSetting(ENV_FLAGS_KEY, json);
   envFlagsCache = flags;
   const { notifyConfigCacheChange } = await import('../utils/config-cache-sync.js');
   await notifyConfigCacheChange('ml-sources');

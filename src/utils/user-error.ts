@@ -1,19 +1,12 @@
-import { Prisma } from '@prisma/client';
+import { isMysqlError } from '../database/client.js';
 
 export function toUserErrorMessage(error: unknown): string {
-  if (error instanceof Prisma.PrismaClientValidationError) {
-    if (error.message.includes('dailyMinute') || error.message.includes('daily_minute')) {
-      return 'O banco precisa ser atualizado. Rode npm run migrate:deploy && npm run prisma:generate e reinicie o manager.';
-    }
-    if (error.message.includes('autoMessage') || error.message.includes('auto_messages')) {
-      return 'Erro ao acessar mensagens automáticas. Verifique se as migrations foram aplicadas (npm run migrate:deploy).';
-    }
-    return 'Erro de validação no banco de dados. Confira as migrations e rode npm run prisma:generate.';
-  }
-
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2021') {
+  if (isMysqlError(error)) {
+    if (error.code === 'ER_NO_SUCH_TABLE') {
       return 'Tabela não encontrada no banco. Rode npm run migrate:deploy.';
+    }
+    if (error.code === 'ER_BAD_FIELD_ERROR') {
+      return 'O banco precisa ser atualizado. Rode npm run migrate:deploy e reinicie.';
     }
     return `Erro no banco (${error.code}). Tente novamente ou confira os logs.`;
   }

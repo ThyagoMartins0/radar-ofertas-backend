@@ -1,6 +1,6 @@
 import { whatsappPublisher } from './channels/whatsapp-publisher.js';
 import { env } from './config/env.js';
-import { prisma } from './database/client.js';
+import { closeDatabase, execute, query } from './database/client.js';
 import { startSenderWorker } from './jobs/sender.js';
 import { searchConfiguredCategories } from './mercado-livre/index.js';
 import { generateAffiliateLink } from './mercado-livre/affiliate-link.js';
@@ -16,6 +16,13 @@ import {
 } from './whatsapp/index.js';
 
 const E2E_LIMIT = Number(process.env.E2E_LIMIT ?? 3);
+
+interface E2eOfferRow {
+  mercadoLivreId: string;
+  title: string;
+  affiliateLink: string | null;
+  sentAt: Date | null;
+}
 
 async function requireValidChannel(sock: Awaited<ReturnType<typeof connectWhatsApp>>): Promise<{
   jid: string;
@@ -76,7 +83,7 @@ async function main(): Promise<void> {
   }
   logger.info({ sampleLink }, 'Sessão ML OK — link encurtado gerado');
 
-  await prisma.offer.deleteMany();
+  await execute('DELETE FROM offers');
   logger.info('Ofertas antigas removidas para teste limpo');
 
   Object.assign(env, { ML_SEARCH_LIMIT: E2E_LIMIT });
@@ -87,7 +94,9 @@ async function main(): Promise<void> {
   logger.info({ count: rawOffers.length }, 'Coleta concluída');
 
   const enqueued = await processOffers(rawOffers);
-  const saved = await prisma.offer.findMany({ orderBy: { createdAt: 'desc' } });
+  const saved = await query<E2eOfferRow>(
+    'SELECT mercado_livre_id AS mercadoLivreId, title, affiliate_link AS affiliateLink, sent_at AS sentAt FROM offers ORDER BY created_at DESC',
+  );
   const shortLinks = saved.filter(
     (o) => o.affiliateLink?.includes('meli.la') || o.affiliateLink?.includes('/sec/'),
   );
@@ -128,10 +137,9 @@ async function main(): Promise<void> {
     await worker.close();
   }
 
-  const sent = await prisma.offer.findMany({
-    where: { sentAt: { not: null } },
-    orderBy: { sentAt: 'desc' },
-  });
+  const sent = await query<E2eOfferRow>(
+    'SELECT mercado_livre_id AS mercadoLivreId, title, affiliate_link AS affiliateLink, sent_at AS sentAt FROM offers WHERE sent_at IS NOT NULL ORDER BY sent_at DESC',
+  );
 
   logger.info(
     {
@@ -147,13 +155,13 @@ async function main(): Promise<void> {
     'Teste E2E concluído com sucesso',
   );
 
-  await prisma.$disconnect();
+  await closeDatabase();
   await disconnectWhatsApp();
   process.exit(0);
 }
 
 main().catch(async (error) => {
   logger.error({ error }, 'Teste E2E falhou');
-  await prisma.$disconnect();
+  await closeDatabase();
   process.exit(1);
 });

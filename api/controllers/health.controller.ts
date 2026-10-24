@@ -1,6 +1,6 @@
 import type { FastifyReply } from 'fastify';
 
-import { prisma } from '../../src/database/client.js';
+import { pingDatabase as pingMysql } from '../../src/database/client.js';
 import {
   getCollectorHealthSnapshot,
   getWorkerHealthSnapshot,
@@ -21,16 +21,15 @@ type HealthBody = {
 
 /** Motivo do erro sem senha — ajuda a diagnosticar o deploy (host/usuário/permissão). */
 function describeDatabaseError(error: unknown): string {
-  const { errorCode, code } = (error ?? {}) as { errorCode?: string; code?: string };
-  const prismaCode = errorCode ?? code;
+  const { code } = (error ?? {}) as { code?: string };
   const message = error instanceof Error ? error.message : String(error);
   const firstLine = message.split('\n').map((line) => line.trim()).filter(Boolean).pop() ?? '';
-  return [prismaCode, firstLine.slice(0, 300)].filter(Boolean).join(': ');
+  return [code, firstLine.slice(0, 300)].filter(Boolean).join(': ');
 }
 
 async function pingDatabase(): Promise<{ status: 'ok' | 'error'; error?: string }> {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await pingMysql();
     return { status: 'ok' };
   } catch (error) {
     return { status: 'error', error: describeDatabaseError(error) };

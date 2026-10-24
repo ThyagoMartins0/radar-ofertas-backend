@@ -1,5 +1,5 @@
 import { env } from './env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 
 export interface ScoreTier {
   enabled: boolean;
@@ -137,7 +137,7 @@ function mergeScoreConfig(override: Partial<ScoreConfig>): ScoreConfig {
 
 async function loadFromDb(): Promise<Partial<ScoreConfig>> {
   try {
-    const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+    const row = await findSetting(SETTING_KEY);
     if (!row) return {};
     return JSON.parse(row.value) as Partial<ScoreConfig>;
   } catch {
@@ -243,11 +243,7 @@ export function parseScoreConfigFromForm(form: Record<string, string>): ScoreCon
 
 export async function saveScoreConfig(config: ScoreConfig): Promise<void> {
   const json = JSON.stringify(config);
-  await prisma.setting.upsert({
-    where: { key: SETTING_KEY },
-    update: { value: json },
-    create: { key: SETTING_KEY, value: json },
-  });
+  await upsertSetting(SETTING_KEY, json);
   scoreCache = config;
   const { notifyConfigCacheChange } = await import('../utils/config-cache-sync.js');
   await notifyConfigCacheChange('score-config');

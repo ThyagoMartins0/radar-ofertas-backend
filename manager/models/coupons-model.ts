@@ -3,7 +3,7 @@ import {
   getCouponsUrlFromDb,
   hydrateCouponsConfigCache,
 } from '../../src/config/coupons-config-store.js';
-import { prisma } from '../../src/database/client.js';
+import { execute, queryOne } from '../../src/database/client.js';
 import { sendCouponToChannelsNow } from '../../src/offers/coupon-service.js';
 import { scrapeAffiliateCoupons } from '../../src/mercado-livre/coupons.js';
 import type { CouponScrapeResult, MlCoupon } from '../../src/mercado-livre/types.js';
@@ -52,7 +52,9 @@ async function loadStoreLinkOverrides(): Promise<Record<string, string>> {
   if (storeLinkOverridesCache) return storeLinkOverridesCache;
 
   try {
-    const row = await prisma.setting.findUnique({ where: { key: STORE_LINK_OVERRIDES_KEY } });
+    const row = await queryOne<{ value: string }>('SELECT value FROM settings WHERE `key` = ?', [
+      STORE_LINK_OVERRIDES_KEY,
+    ]);
     if (row?.value?.trim()) {
       const parsed = JSON.parse(row.value) as Record<string, string>;
       if (parsed && typeof parsed === 'object') {
@@ -69,11 +71,11 @@ async function loadStoreLinkOverrides(): Promise<Record<string, string>> {
 }
 
 async function saveStoreLinkOverrides(overrides: Record<string, string>): Promise<void> {
-  await prisma.setting.upsert({
-    where: { key: STORE_LINK_OVERRIDES_KEY },
-    update: { value: JSON.stringify(overrides) },
-    create: { key: STORE_LINK_OVERRIDES_KEY, value: JSON.stringify(overrides) },
-  });
+  await execute(
+    'INSERT INTO settings (`key`, value, updated_at) VALUES (?, ?, ?) ' +
+      'ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)',
+    [STORE_LINK_OVERRIDES_KEY, JSON.stringify(overrides), new Date()],
+  );
   storeLinkOverridesCache = overrides;
 }
 
@@ -86,7 +88,9 @@ async function hydrateCouponsCache(): Promise<void> {
   cacheHydrated = true;
 
   try {
-    const row = await prisma.setting.findUnique({ where: { key: COUPONS_CACHE_KEY } });
+    const row = await queryOne<{ value: string }>('SELECT value FROM settings WHERE `key` = ?', [
+      COUPONS_CACHE_KEY,
+    ]);
     if (!row?.value?.trim()) return;
 
     const parsed = JSON.parse(row.value) as CouponScrapeResult;
@@ -103,11 +107,11 @@ async function hydrateCouponsCache(): Promise<void> {
 }
 
 async function persistCouponsCache(result: CouponScrapeResult): Promise<void> {
-  await prisma.setting.upsert({
-    where: { key: COUPONS_CACHE_KEY },
-    update: { value: JSON.stringify(result) },
-    create: { key: COUPONS_CACHE_KEY, value: JSON.stringify(result) },
-  });
+  await execute(
+    'INSERT INTO settings (`key`, value, updated_at) VALUES (?, ?, ?) ' +
+      'ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)',
+    [COUPONS_CACHE_KEY, JSON.stringify(result), new Date()],
+  );
 }
 
 export async function loadCouponsPage(

@@ -1,6 +1,6 @@
 import { getBrandName } from '../config/brand-config.js';
 import { env } from '../config/env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 import { buildAffiliateLink } from '../mercado-livre/index.js';
 import type { MlCoupon } from '../mercado-livre/types.js';
 import { cleanupRenderedMessage } from './message-template.js';
@@ -148,7 +148,7 @@ function mergeCouponPlaceholderVisibility(
 export async function loadCouponPlaceholderVisibility(): Promise<CouponPlaceholderVisibility> {
   if (placeholderCache) return placeholderCache;
   try {
-    const row = await prisma.setting.findUnique({ where: { key: KEYS.placeholders } });
+    const row = await findSetting(KEYS.placeholders);
     if (row) {
       const parsed = JSON.parse(row.value) as Partial<CouponPlaceholderVisibility>;
       placeholderCache = mergeCouponPlaceholderVisibility(parsed);
@@ -164,11 +164,7 @@ export async function saveCouponPlaceholderVisibility(
   visibility: CouponPlaceholderVisibility,
 ): Promise<void> {
   const json = JSON.stringify(visibility);
-  await prisma.setting.upsert({
-    where: { key: KEYS.placeholders },
-    update: { value: json },
-    create: { key: KEYS.placeholders, value: json },
-  });
+  await upsertSetting(KEYS.placeholders, json);
   placeholderCache = visibility;
 }
 
@@ -187,7 +183,7 @@ export function parseCouponPlaceholderVisibilityFromForm(
 export async function loadCouponTemplate(): Promise<string> {
   if (templateCache) return templateCache;
   try {
-    const row = await prisma.setting.findUnique({ where: { key: KEYS.template } });
+    const row = await findSetting(KEYS.template);
     if (row) {
       const trimmed = row.value.trim();
       if (trimmed) {
@@ -207,11 +203,7 @@ export async function saveCouponTemplate(template: string): Promise<void> {
     throw new Error('O template de cupom não pode ficar vazio');
   }
 
-  await prisma.setting.upsert({
-    where: { key: KEYS.template },
-    update: { value: trimmed },
-    create: { key: KEYS.template, value: trimmed },
-  });
+  await upsertSetting(KEYS.template, trimmed);
   templateCache = trimmed;
 }
 

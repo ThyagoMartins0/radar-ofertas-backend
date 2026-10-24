@@ -1,5 +1,5 @@
 import { env } from './env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 
 const SETTING_KEY = 'mlCouponsUrl';
 
@@ -11,7 +11,7 @@ export function invalidateCouponsConfigCache(): void {
 
 export async function hydrateCouponsConfigCache(): Promise<void> {
   try {
-    const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+    const row = await findSetting(SETTING_KEY);
     if (row?.value?.trim()) {
       cache = row.value.trim();
     }
@@ -27,7 +27,7 @@ export function getCouponsUrlCached(): string {
 export async function getCouponsUrlFromDb(): Promise<string> {
   if (cache) return cache;
 
-  const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+  const row = await findSetting(SETTING_KEY);
   if (row?.value?.trim()) {
     cache = row.value.trim();
     return cache;
@@ -53,11 +53,7 @@ export async function saveCouponsUrl(url: string): Promise<void> {
     throw new Error('A URL deve ser do Mercado Livre');
   }
 
-  await prisma.setting.upsert({
-    where: { key: SETTING_KEY },
-    update: { value: trimmed },
-    create: { key: SETTING_KEY, value: trimmed },
-  });
+  await upsertSetting(SETTING_KEY, trimmed);
 
   cache = trimmed;
   const { notifyConfigCacheChange } = await import('../utils/config-cache-sync.js');

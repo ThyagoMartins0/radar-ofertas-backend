@@ -32,7 +32,7 @@ export function isUnresolvedPlaceholder(value: string | undefined): boolean {
 
 /**
  * Monta DATABASE_URL a partir de MYSQL_* e corrige localhost dentro de containers.
- * Deve rodar antes de qualquer import do Prisma (`tsx --import ./src/bootstrap-env.ts`).
+ * Deve rodar antes de qualquer conexão com o MySQL (`tsx --import ./src/bootstrap-env.ts`).
  */
 export function applyRuntimeEnv(): void {
   if (process.env.NODE_ENV === 'development') {

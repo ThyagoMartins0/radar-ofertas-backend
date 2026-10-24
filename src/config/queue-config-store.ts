@@ -1,5 +1,5 @@
 import { env } from './env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, findSettings, upsertSetting } from '../database/settings.js';
 
 const KEYS = {
   senderDelay: 'senderDelayMinutes',
@@ -35,18 +35,14 @@ const cache: QueueConfigCache = {
 };
 
 async function loadIntSetting(key: string): Promise<number | null> {
-  const row = await prisma.setting.findUnique({ where: { key } });
+  const row = await findSetting(key);
   if (!row) return null;
   const parsed = Number.parseInt(row.value, 10);
   return Number.isNaN(parsed) ? null : parsed;
 }
 
 async function saveIntSetting(key: string, value: number): Promise<void> {
-  await prisma.setting.upsert({
-    where: { key },
-    update: { value: String(value) },
-    create: { key, value: String(value) },
-  });
+  await upsertSetting(key, String(value));
 }
 
 export function invalidateQueueConfigCache(): void {
@@ -66,9 +62,7 @@ async function notifyQueueConfigChange(): Promise<void> {
 }
 
 export async function hydrateQueueConfigCache(): Promise<void> {
-  const rows = await prisma.setting.findMany({
-    where: { key: { in: Object.values(KEYS) } },
-  });
+  const rows = await findSettings(Object.values(KEYS));
 
   for (const row of rows) {
     const val = Number.parseInt(row.value, 10);

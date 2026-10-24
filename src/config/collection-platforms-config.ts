@@ -1,6 +1,6 @@
 import { getAccountsCachedSync } from '../accounts/repository.js';
 import { DEFAULT_ACCOUNT_ID } from '../accounts/types.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 
 const AMAZON_COLLECTION_ENABLED_KEY = 'amazonCollectionEnabled';
 
@@ -12,7 +12,7 @@ export function invalidateCollectionPlatformsCache(): void {
 
 export async function hydrateCollectionPlatformsCache(): Promise<void> {
   try {
-    const row = await prisma.setting.findUnique({ where: { key: AMAZON_COLLECTION_ENABLED_KEY } });
+    const row = await findSetting(AMAZON_COLLECTION_ENABLED_KEY);
     amazonCollectionEnabledCache = row?.value !== 'false';
   } catch {
     amazonCollectionEnabledCache = true;
@@ -24,11 +24,7 @@ export function isAmazonCollectionEnabled(): boolean {
 }
 
 export async function saveAmazonCollectionEnabled(enabled: boolean): Promise<void> {
-  await prisma.setting.upsert({
-    where: { key: AMAZON_COLLECTION_ENABLED_KEY },
-    create: { key: AMAZON_COLLECTION_ENABLED_KEY, value: enabled ? 'true' : 'false' },
-    update: { value: enabled ? 'true' : 'false' },
-  });
+  await upsertSetting(AMAZON_COLLECTION_ENABLED_KEY, enabled ? 'true' : 'false');
   amazonCollectionEnabledCache = enabled;
 }
 

@@ -113,8 +113,6 @@ const ROUTES: Array<{ path: string; method: HttpMethod; operation: ReturnType<ty
   { path: '/worker/start', method: 'post', operation: op('Iniciar worker local', ['Workers']) },
   { path: '/worker/stop', method: 'post', operation: op('Parar worker local', ['Workers']) },
   { path: '/worker/restart', method: 'post', operation: op('Reiniciar worker local', ['Workers']) },
-  { path: '/prisma/status', method: 'get', operation: op('Status Prisma generate', ['Workers']) },
-  { path: '/prisma/generate', method: 'post', operation: op('Executar prisma generate', ['Workers']) },
   { path: '/logs', method: 'get', operation: op('Logs paginados/filtrados', ['Logs']) },
   { path: '/logs/stream', method: 'get', operation: op('Stream SSE de logs em tempo real', ['Logs']) },
 ];
@@ -155,7 +153,7 @@ export function buildOpenApiSpec(): OpenApiSpec {
       { name: 'Fontes', description: 'Fontes de coleta por canal' },
       { name: 'Contas', description: 'Multi-conta' },
       { name: 'Conexões', description: 'WhatsApp, ML, Telegram' },
-      { name: 'Workers', description: 'Worker e Prisma' },
+      { name: 'Workers', description: 'Worker' },
       { name: 'Logs', description: 'Auditoria e scrape ML' },
     ],
     paths,

@@ -11,7 +11,7 @@ cp .env.example .env
 
 ### Banco de dados
 
-Use `DATABASE_URL` (Prisma) e, para o MySQL do Docker Compose, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_PORT`.
+Use `DATABASE_URL` (MySQL) e, para o MySQL do Docker Compose, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_PORT`.
 
 ### Frontend (CORS)
 

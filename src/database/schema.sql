@@ -1,21 +1,14 @@
 -- Radar Ofertas — schema MySQL 8+ (utf8mb4)
--- Banco Dokploy: ml-db-link-banco (usuário mix-s-db-link02)
 --
--- Importe pelo painel (SQL) ou CLI:
---   mysql -h HOST -P 3360 -u mix-s-db-link02 -p ml-db-link-banco < prisma/mysql/import.sql
---
--- No Dokploy o banco já existe — não rode CREATE DATABASE abaixo.
+-- Idempotente (CREATE TABLE IF NOT EXISTS): rodado por `npm run migrate:deploy`
+-- (serviço migrate do docker compose) ou importado à mão no painel do banco:
+--   mysql -h HOST -P PORTA -u USUARIO -p BANCO < src/database/schema.sql
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- CREATE DATABASE IF NOT EXISTS `ml-db-link-banco`
---   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE `ml-db-link-banco`;
-
 -- ---------------------------------------------------------------------------
--- Tabelas de aplicação (espelham prisma/schema.prisma)
+-- Tabelas de aplicação
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS `settings` (
@@ -102,41 +95,15 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `users_username_key` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Histórico do Prisma Migrate (baseline MySQL)
-CREATE TABLE IF NOT EXISTS `_prisma_migrations` (
-  `id` VARCHAR(36) NOT NULL,
-  `checksum` VARCHAR(64) NOT NULL,
-  `finished_at` DATETIME(3) NULL,
-  `migration_name` VARCHAR(255) NOT NULL,
-  `logs` TEXT NULL,
-  `rolled_back_at` DATETIME(3) NULL,
-  `started_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `applied_steps_count` INT UNSIGNED NOT NULL DEFAULT 0,
-  PRIMARY KEY (`id`)
+-- Sessão de afiliado Mercado Livre (storageState do Playwright) — chave = authPath da conta
+CREATE TABLE IF NOT EXISTS `ml_sessions` (
+  `auth_path` VARCHAR(191) NOT NULL,
+  `storage_state` JSON NULL,
+  `last_login_at` DATETIME(3) NULL,
+  `last_refresh_at` DATETIME(3) NULL,
+  `last_error` TEXT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`auth_path`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `_prisma_migrations` (
-  `id`,
-  `checksum`,
-  `finished_at`,
-  `migration_name`,
-  `logs`,
-  `rolled_back_at`,
-  `started_at`,
-  `applied_steps_count`
-)
-SELECT
-  '00000000-0000-0000-0000-000000000001',
-  '68be1a7003cf4d7c56f62d124205443c327cd2eca6b46a39f425898fb4968aae',
-  CURRENT_TIMESTAMP(3),
-  '20250627000000_init',
-  NULL,
-  NULL,
-  CURRENT_TIMESTAMP(3),
-  1
-FROM DUAL
-WHERE NOT EXISTS (
-  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20250627000000_init'
-);
 
 SET FOREIGN_KEY_CHECKS = 1;

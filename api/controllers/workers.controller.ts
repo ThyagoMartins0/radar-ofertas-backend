@@ -1,10 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import {
-  getPrismaState,
   getWorkerState,
   restartWorker,
-  runPrismaGenerate,
   startWorker,
   stopWorker,
 } from '../../manager/models/process-model.js';
@@ -57,19 +55,4 @@ export async function restartWorkerHandler(
   assertSpawnAllowed();
   const query = parseQuery(workerQuerySchema, request.query);
   reply.status(200).send(await restartWorker(resolveChannel(query.channel), query.accountId));
-}
-
-export async function getPrismaStatusHandler(
-  _request: FastifyRequest,
-  reply: FastifyReply,
-): Promise<void> {
-  reply.status(200).send(getPrismaState());
-}
-
-export async function runPrismaGenerateHandler(
-  _request: FastifyRequest,
-  reply: FastifyReply,
-): Promise<void> {
-  assertSpawnAllowed();
-  reply.status(200).send(runPrismaGenerate());
 }

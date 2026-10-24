@@ -1,4 +1,4 @@
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 
 export interface BrandSettings {
   name: string;
@@ -49,7 +49,7 @@ export function getBrandSettings(): BrandSettings {
 
 export async function hydrateBrandCache(): Promise<void> {
   try {
-    const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+    const row = await findSetting(SETTING_KEY);
     if (row) {
       brandCache = parseBrandFromJson(row.value);
     }
@@ -99,11 +99,7 @@ export async function saveBrandSettings(input: {
   const settings: BrandSettings = { name, subtitle, logoBase64 };
   const json = JSON.stringify(settings);
 
-  await prisma.setting.upsert({
-    where: { key: SETTING_KEY },
-    update: { value: json },
-    create: { key: SETTING_KEY, value: json },
-  });
+  await upsertSetting(SETTING_KEY, json);
 
   brandCache = settings;
   const { notifyConfigCacheChange } = await import('../utils/config-cache-sync.js');

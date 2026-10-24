@@ -1,5 +1,5 @@
 import { env } from '../config/env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 import { normalizeWhatsAppInviteLink } from './invite.js';
 
 export interface WhatsAppChannelCache {
@@ -14,11 +14,7 @@ let channelCache: WhatsAppChannelCache | null = null;
 
 async function writeCache(payload: WhatsAppChannelCache): Promise<void> {
   const json = JSON.stringify(payload);
-  await prisma.setting.upsert({
-    where: { key: SETTING_KEY },
-    update: { value: json },
-    create: { key: SETTING_KEY, value: json },
-  });
+  await upsertSetting(SETTING_KEY, json);
   channelCache = payload;
 }
 
@@ -63,7 +59,7 @@ export async function saveWhatsAppChannelInviteLink(inviteLink: string): Promise
 export async function loadWhatsAppChannelCache(): Promise<WhatsAppChannelCache | null> {
   if (channelCache) return channelCache;
   try {
-    const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+    const row = await findSetting(SETTING_KEY);
     if (!row) return null;
     const parsed = JSON.parse(row.value) as WhatsAppChannelCache;
     if (!parsed.channelId || !parsed.channelName) return null;

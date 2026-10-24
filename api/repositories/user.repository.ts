@@ -1,4 +1,4 @@
-import { prisma } from '../../src/database/client.js';
+import { execute, newId, queryOne } from '../../src/database/client.js';
 
 export type UserRecord = {
   id: string;
@@ -8,13 +8,10 @@ export type UserRecord = {
   updatedAt: Date;
 };
 
-function mapUser(row: {
-  id: string;
-  username: string;
-  passwordHash: string;
-  createdAt: Date;
-  updatedAt: Date;
-}): UserRecord {
+const USER_COLUMNS =
+  'id, username, password_hash AS passwordHash, created_at AS createdAt, updated_at AS updatedAt';
+
+function mapUser(row: UserRecord): UserRecord {
   return {
     id: row.id,
     username: row.username,
@@ -25,16 +22,19 @@ function mapUser(row: {
 }
 
 export async function countUsers(): Promise<number> {
-  return prisma.user.count();
+  const row = await queryOne<{ total: number }>('SELECT COUNT(*) AS total FROM users');
+  return Number(row?.total ?? 0);
 }
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
-  const row = await prisma.user.findUnique({ where: { username } });
+  const row = await queryOne<UserRecord>(`SELECT ${USER_COLUMNS} FROM users WHERE username = ?`, [
+    username,
+  ]);
   return row ? mapUser(row) : null;
 }
 
 export async function findUserById(id: string): Promise<UserRecord | null> {
-  const row = await prisma.user.findUnique({ where: { id } });
+  const row = await queryOne<UserRecord>(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [id]);
   return row ? mapUser(row) : null;
 }
 
@@ -42,12 +42,18 @@ export async function createUser(input: {
   username: string;
   passwordHash: string;
 }): Promise<UserRecord> {
-  const row = await prisma.user.create({
-    data: {
-      username: input.username,
-      passwordHash: input.passwordHash,
-    },
-  });
+  const now = new Date();
+  const row: UserRecord = {
+    id: newId(),
+    username: input.username,
+    passwordHash: input.passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await execute(
+    'INSERT INTO users (id, username, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    [row.id, row.username, row.passwordHash, row.createdAt, row.updatedAt],
+  );
   return mapUser(row);
 }
 

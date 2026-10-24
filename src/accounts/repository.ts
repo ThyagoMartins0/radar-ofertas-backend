@@ -1,7 +1,6 @@
 import path from 'node:path';
-import type { Prisma } from '@prisma/client';
 import { env } from '../config/env.js';
-import { prisma } from '../database/client.js';
+import { execute, fromJson, query, toBool, toJson, transaction } from '../database/client.js';
 import { isPlaceholderChannelId } from '../whatsapp/index.js';
 import { parseAccountRecord, parseAccountRow } from './account-config.js';
 import {
@@ -98,47 +97,42 @@ function accountKey(account: Pick<Account, 'id' | 'platform'>): string {
   return `${account.id}:${account.platform}`;
 }
 
-function accountToRow(account: Account): {
-  id: string;
-  platform: string;
-  label: string;
-  enabled: boolean;
-  config: Prisma.InputJsonValue;
-} {
-  return {
-    id: account.id,
-    platform: account.platform,
-    label: account.label,
-    enabled: account.enabled,
-    config: account.config as unknown as Prisma.InputJsonValue,
-  };
-}
-
 async function persistAccounts(accounts: Account[]): Promise<Account[]> {
   const validated = accounts.map((account) => parseAccountRecord(account));
   const keepKeys = new Set(validated.map(accountKey));
 
-  await prisma.$transaction(async (tx) => {
-    const existing = await tx.account.findMany({ select: { id: true, platform: true } });
+  await transaction(async (conn) => {
+    const existing = await query<{ id: string; platform: string }>(
+      'SELECT id, platform FROM accounts',
+      [],
+      conn,
+    );
     for (const row of existing) {
       if (!keepKeys.has(`${row.id}:${row.platform}`)) {
-        await tx.account.delete({
-          where: { id_platform: { id: row.id, platform: row.platform } },
-        });
+        await execute(
+          'DELETE FROM accounts WHERE id = ? AND platform = ?',
+          [row.id, row.platform],
+          conn,
+        );
       }
     }
 
     for (const account of validated) {
-      const row = accountToRow(account);
-      await tx.account.upsert({
-        where: { id_platform: { id: account.id, platform: account.platform } },
-        create: row,
-        update: {
-          label: row.label,
-          enabled: row.enabled,
-          config: row.config,
-        },
-      });
+      await execute(
+        `INSERT INTO accounts (id, platform, label, enabled, config, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           label = VALUES(label), enabled = VALUES(enabled), config = VALUES(config)`,
+        [
+          account.id,
+          account.platform,
+          account.label,
+          account.enabled,
+          toJson(account.config),
+          new Date(),
+        ],
+        conn,
+      );
     }
   });
 
@@ -169,14 +163,20 @@ export async function loadAccounts(): Promise<Account[]> {
   if (accountsCache) return accountsCache;
 
   try {
-    const rows = await prisma.account.findMany({
-      orderBy: [{ id: 'asc' }, { platform: 'asc' }],
-    });
+    const rows = await query<{
+      id: string;
+      platform: string;
+      label: string;
+      enabled: unknown;
+      config: unknown;
+    }>('SELECT id, platform, label, enabled, config FROM accounts ORDER BY id ASC, platform ASC');
     if (rows.length === 0) {
       return seedDefaultAccounts();
     }
 
-    const loaded = rows.map((row) => parseAccountRow(row));
+    const loaded = rows.map((row) =>
+      parseAccountRow({ ...row, enabled: toBool(row.enabled), config: fromJson(row.config) }),
+    );
     accountsCache = await ensureDefaultPlatformAccounts(loaded);
     return accountsCache;
   } catch {

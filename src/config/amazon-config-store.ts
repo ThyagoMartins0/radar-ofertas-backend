@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { env } from './env.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 import {
   DEFAULT_AMAZON_AFFILIATE_LINK_PREFIX,
   DEFAULT_AMAZON_BASE_URL,
@@ -31,7 +31,7 @@ export function invalidateAmazonConfigCache(): void {
 
 export async function hydrateAmazonConfigCache(): Promise<void> {
   try {
-    const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+    const row = await findSetting(SETTING_KEY);
     if (!row?.value?.trim()) return;
     const parsed = amazonConfigSchema.parse(JSON.parse(row.value));
     cache = parsed;
@@ -47,7 +47,7 @@ export function getAmazonConfigCached(): AmazonAffiliateConfig {
 export async function getAmazonConfigFromDb(): Promise<AmazonAffiliateConfig> {
   if (cache) return cache;
 
-  const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } });
+  const row = await findSetting(SETTING_KEY);
   if (row?.value?.trim()) {
     try {
       cache = amazonConfigSchema.parse(JSON.parse(row.value));
@@ -84,11 +84,7 @@ export async function saveAmazonAffiliateConfig(
     throw new Error('link.amazon não é um domínio válido — use o ID da loja (tag) no link amazon.com.br/dp/ASIN?tag=...');
   }
 
-  await prisma.setting.upsert({
-    where: { key: SETTING_KEY },
-    update: { value: JSON.stringify(config) },
-    create: { key: SETTING_KEY, value: JSON.stringify(config) },
-  });
+  await upsertSetting(SETTING_KEY, JSON.stringify(config));
 
   cache = config;
   const { notifyConfigCacheChange } = await import('../utils/config-cache-sync.js');

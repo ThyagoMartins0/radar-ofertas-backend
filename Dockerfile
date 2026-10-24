@@ -26,7 +26,6 @@ FROM base AS deps
 ENV NODE_ENV=development
 
 COPY package.json package-lock.json tsconfig.json ./
-COPY prisma ./prisma
 
 RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" \
     && git config --global url."https://github.com/".insteadOf "git@github.com:" \
@@ -44,7 +43,6 @@ RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.co
        done \
     && npx playwright install-deps chromium \
     && npx playwright install chromium \
-    && npx prisma generate \
     && mkdir -p /app/data
 
 FROM deps AS backend

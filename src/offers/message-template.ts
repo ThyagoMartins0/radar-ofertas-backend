@@ -1,5 +1,5 @@
 import { getBrandName } from '../config/brand-config.js';
-import { prisma } from '../database/client.js';
+import { findSetting, upsertSetting } from '../database/settings.js';
 import { detectOfferPlatform } from './platform.js';
 import type { OfferRecord } from './types.js';
 import type { OfferPlatform } from './platform.js';
@@ -261,7 +261,7 @@ export function loadPlaceholderVisibilitySync(): PlaceholderVisibility {
 export async function loadPlaceholderVisibility(): Promise<PlaceholderVisibility> {
   if (placeholderCache) return placeholderCache;
   try {
-    const row = await prisma.setting.findUnique({ where: { key: KEYS.placeholders } });
+    const row = await findSetting(KEYS.placeholders);
     if (row) {
       const parsed = JSON.parse(row.value) as Partial<PlaceholderVisibility>;
       placeholderCache = mergePlaceholderVisibility(parsed);
@@ -275,11 +275,7 @@ export async function loadPlaceholderVisibility(): Promise<PlaceholderVisibility
 
 export async function savePlaceholderVisibility(visibility: PlaceholderVisibility): Promise<void> {
   const json = JSON.stringify(visibility);
-  await prisma.setting.upsert({
-    where: { key: KEYS.placeholders },
-    update: { value: json },
-    create: { key: KEYS.placeholders, value: json },
-  });
+  await upsertSetting(KEYS.placeholders, json);
   placeholderCache = visibility;
 }
 
@@ -301,7 +297,7 @@ export function parsePlaceholderVisibilityFromForm(
 export async function loadMessageTemplate(): Promise<string> {
   if (templateCache) return templateCache;
   try {
-    const row = await prisma.setting.findUnique({ where: { key: KEYS.template } });
+    const row = await findSetting(KEYS.template);
     if (row) {
       const trimmed = row.value.trim();
       if (trimmed) {
@@ -321,11 +317,7 @@ export async function saveMessageTemplate(template: string): Promise<void> {
     throw new Error('O template não pode ficar vazio');
   }
 
-  await prisma.setting.upsert({
-    where: { key: KEYS.template },
-    update: { value: trimmed },
-    create: { key: KEYS.template, value: trimmed },
-  });
+  await upsertSetting(KEYS.template, trimmed);
   templateCache = trimmed;
 }
 
