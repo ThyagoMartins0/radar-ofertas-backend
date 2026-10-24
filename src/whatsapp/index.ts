@@ -599,16 +599,33 @@ export async function connectWhatsApp(options?: ConnectWhatsAppOptions): Promise
     const CONNECT_TIMEOUT_MS = 120_000;
     let settled = false;
     let timeout = setTimeout(onTimeout, CONNECT_TIMEOUT_MS);
+    let reconnectWatch: NodeJS.Timeout | undefined;
 
     function settle(action: () => void): void {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      clearInterval(reconnectWatch);
       action();
     }
 
     function onTimeout(): void {
+      const connected = session.socket;
+      if (connected) {
+        settle(() => resolve(connected));
+        return;
+      }
       settle(() => reject(new Error('WhatsApp connection timeout')));
+    }
+
+    // Após o pareamento o WhatsApp fecha com 515 e a reconexão cria OUTRO socket — este
+    // `sock` nunca abre. Resolve com o socket da sessão quando a reconexão concluir.
+    function watchReconnect(): void {
+      if (reconnectWatch) return;
+      reconnectWatch = setInterval(() => {
+        const connected = session.socket;
+        if (connected) settle(() => resolve(connected));
+      }, 500);
     }
 
     function refreshTimeout(ms: number): void {
@@ -635,6 +652,11 @@ export async function connectWhatsApp(options?: ConnectWhatsAppOptions): Promise
           settle(() =>
             reject(new Error('WhatsApp logged out — credenciais inválidas, reconecte para novo QR')),
           );
+          return;
+        }
+        if (session.allowReconnect) {
+          refreshTimeout(CONNECT_TIMEOUT_MS);
+          watchReconnect();
         }
       }
     });
