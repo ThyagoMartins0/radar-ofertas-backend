@@ -41,11 +41,18 @@ function channelKey(channel: string, accountId = 'default'): string {
 function getRedis(): Redis | null {
   if (!env.REDIS_ENABLED || redisFailed) return null;
   if (!redisClient) {
-    redisClient = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-      enableOfflineQueue: false,
-    });
+    try {
+      redisClient = new Redis(env.REDIS_URL, {
+        maxRetriesPerRequest: 1,
+        lazyConnect: true,
+        enableOfflineQueue: false,
+      });
+    } catch (err) {
+      // REDIS_URL inválida (ex.: placeholder do Dokploy não substituído) — segue sem Redis.
+      console.error('[metrics] REDIS_URL inválida, métricas sem Redis:', (err as Error).message);
+      redisFailed = true;
+      return null;
+    }
     redisClient.on('error', () => {
       redisFailed = true;
     });
