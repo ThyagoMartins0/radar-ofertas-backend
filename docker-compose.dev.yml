@@ -1,0 +1,12 @@
+# Override de desenvolvimento — API já exposta em docker-compose.yml (API_PORT).
+# Painel React: repositório radar-ofertas (frontend) em http://localhost:5173
+#
+# Uso:
+#   npm run docker:dev
+#
+# API: http://localhost:3001
+
+services:
+  api:
+    ports:
+      - "${API_PORT:-3001}:3001"

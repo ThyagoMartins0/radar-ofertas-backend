@@ -1,0 +1,9 @@
+.env
+build
+node_modules
+data/
+.prisma/
+test-results/
+playwright-report/
+blob-report/
+auth_info_baileys

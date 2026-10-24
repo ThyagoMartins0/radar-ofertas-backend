@@ -1,0 +1,154 @@
+# Radar Ofertas — produção
+#
+# Processos:
+#   collector  → coleta de ofertas (singleton)
+#   scheduler  → mensagens automáticas
+#   worker     → envio unificado (WhatsApp + Telegram, todas as contas)
+#   api        → API REST + login ML (noVNC opcional)
+# Painel React: repositório/pasta frontend/ (docker compose próprio).
+
+x-app-environment: &app-environment
+  NODE_ENV: production
+  APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+  REDIS_ENABLED: "true"
+  TELEGRAM_ENABLED: "false"
+  DATABASE_URL: mysql://${MYSQL_USER:-radar}:${MYSQL_PASSWORD:-radar_secret}@mysql:3306/${MYSQL_DATABASE:-radar_ofertas}
+  REDIS_URL: redis://redis:6379
+  WHATSAPP_AUTH_PATH: /app/data/auth_info_baileys
+  ML_AUTH_PATH: /app/data/ml_auth
+  ML_USE_BROWSER_FALLBACK: ${ML_USE_BROWSER_FALLBACK:-true}
+  ML_BROWSER_HEADLESS: ${ML_BROWSER_HEADLESS:-true}
+
+x-app-build: &app-build
+  context: .
+  dockerfile: docker/Dockerfile.backend
+
+x-app-base: &app-base
+  build: *app-build
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    <<: *app-environment
+  volumes:
+    - ./data:/app/data
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-radar_root_secret}
+      MYSQL_USER: ${MYSQL_USER:-radar}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-radar_secret}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-radar_ofertas}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD:-radar_root_secret}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build: *app-build
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      <<: *app-environment
+    command: ["npm", "run", "migrate:deploy"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  collector:
+    <<: *app-base
+    command: ["npx", "tsx", "backend/src/app.ts"]
+    environment:
+      <<: *app-environment
+      SKIP_MIGRATIONS: "true"
+    volumes:
+      - ./data:/app/data
+      - ./backend/src:/app/backend/src
+
+  scheduler:
+    <<: *app-base
+    command: ["npx", "tsx", "backend/src/scheduler.ts"]
+    environment:
+      <<: *app-environment
+      SKIP_MIGRATIONS: "true"
+    volumes:
+      - ./data:/app/data
+      - ./backend/src:/app/backend/src
+
+  worker:
+    <<: *app-base
+    command: ["npx", "tsx", "backend/src/worker.ts"]
+    environment:
+      <<: *app-environment
+      SKIP_MIGRATIONS: "true"
+    restart: on-failure
+    volumes:
+      - ./data:/app/data
+      - ./backend/src:/app/backend/src
+
+  api:
+    <<: *app-base
+    entrypoint: ["/app/docker/api-entrypoint.sh"]
+    command: ["npx", "tsx", "backend/api/server.ts"]
+    ports:
+      - "${API_PORT:-3001}:3001"
+      - "${MANAGER_NOVNC_PORT:-6080}:${MANAGER_NOVNC_PORT:-6080}"
+    environment:
+      <<: *app-environment
+      API_PORT: "3001"
+      MANAGER_CAN_SPAWN_WORKERS: "false"
+      MANAGER_VNC_ENABLED: ${MANAGER_VNC_ENABLED:-false}
+      MANAGER_VNC_PORT: ${MANAGER_VNC_PORT:-5900}
+      MANAGER_VNC_DISPLAY: ${MANAGER_VNC_DISPLAY:-:99}
+      MANAGER_NOVNC_PORT: ${MANAGER_NOVNC_PORT:-6080}
+      SKIP_MIGRATIONS: "true"
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app/backend
+
+volumes:
+  mysql_data:
+  redis_data:

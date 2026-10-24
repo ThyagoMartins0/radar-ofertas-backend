@@ -1,0 +1,84 @@
+{
+  "name": "radar-ofertas-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "install:browser": "npx playwright install-deps chromium && npx playwright install chromium",
+    "check": "tsx --env-file=.env backend/src/scripts/preflight.ts",
+    "setup": "npm run check -- --guide",
+    "up": "tsx --env-file=.env backend/src/scripts/up.ts",
+    "preflight": "tsx --env-file=.env backend/src/scripts/preflight.ts",
+    "dev": "tsx watch --env-file=.env backend/src/app.ts",
+    "scheduler": "tsx watch --env-file=.env backend/src/scheduler.ts",
+    "worker": "tsx watch --env-file=.env backend/src/worker.ts",
+    "api": "tsx watch --env-file=.env --clear-screen=false --include \"./backend/**\" backend/api/server.ts",
+    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d mysql redis migrate api collector scheduler worker",
+    "docker:dev:down": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "prisma:generate": "prisma generate",
+    "ml:login": "tsx --env-file=.env backend/src/ml-login.ts",
+    "wa:login": "tsx --env-file=.env backend/src/wa-login.ts",
+    "wa:channel": "tsx --env-file=.env backend/src/wa-channel.ts",
+    "wa:destination": "tsx --env-file=.env backend/src/wa-destination.ts",
+    "e2e:test": "tsx --env-file=.env backend/src/run-e2e-test.ts",
+    "test": "tsx --import ./backend/src/test/preload.ts backend/src/test/run-tests.ts",
+    "lint": "eslint \"backend/**/*.ts\"",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write backend",
+    "format:check": "prettier --check backend",
+    "postinstall": "prisma generate && playwright install chromium",
+    "predev": "npm run preflight -- --profile=collector",
+    "prescheduler": "npm run preflight -- --profile=scheduler",
+    "preworker": "npm run preflight -- --profile=worker",
+    "preapi": "npm run preflight -- --profile=api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^25.8.0",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "prisma": "^6.19.0",
+    "tsx": "^4.22.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.1.0",
+    "@hapi/boom": "^10.0.1",
+    "@prisma/client": "^6.19.0",
+    "baileys": "git+https://github.com/alesdi/Baileys.git#fix/newsletter-media-upload-path",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.66.4",
+    "cheerio": "^1.1.2",
+    "fastify": "^5.10.0",
+    "ioredis": "^5.11.1",
+    "jose": "^6.2.4",
+    "pino": "^10.3.1",
+    "playwright": "^1.52.0",
+    "qrcode-terminal": "^0.12.0",
+    "zod": "^4.4.3"
+  },
+  "prisma": {
+    "schema": "backend/prisma/schema.prisma"
+  },
+  "description": "Backend Radar Ofertas: collector, workers, filas e API REST (/api/v1). Frontend em frontend/ (repositório separado).",
+  "main": "eslint.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YoungC0DE/radar-ofertas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/YoungC0DE/radar-ofertas/issues"
+  },
+  "homepage": "https://github.com/YoungC0DE/radar-ofertas#readme"
+}

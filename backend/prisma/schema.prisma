@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model Offer {
+  id             String    @id @default(cuid())
+  mercadoLivreId String    @unique @map("mercado_livre_id")
+  title          String
+  price          Decimal   @db.Decimal(12, 2)
+  oldPrice       Decimal?  @map("old_price") @db.Decimal(12, 2)
+  discount       Int?
+  image          String?
+  permalink      String?
+  affiliateLink  String?   @map("affiliate_link")
+  rating         Float?
+  soldQuantity   Int?      @map("sold_quantity")
+  salesRank      String?   @map("sales_rank")
+  seller         String?
+  officialStore  Boolean   @default(false) @map("official_store")
+  bestSeller     Boolean   @default(false) @map("best_seller")
+  score          Int       @default(0)
+  /// Primeiro envio bem-sucedido em QUALQUER canal (denormalizado a partir de
+  /// OfferDelivery). Mantido para dedup e visões globais; o estado por canal
+  /// é sempre lido de OfferDelivery, nunca daqui.
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  deliveries     OfferDelivery[]
+
+  @@map("offers")
+}
+
+/// Um registro por (oferta, canal): fonte da verdade de quem já recebeu o quê.
+/// A linha nasce quando o envio é enfileirado (sentAt nulo = pendente) e é
+/// fechada pelo worker do canal com sentAt/messageId ou com error.
+model OfferDelivery {
+  id        String    @id @default(cuid())
+  offerId   String    @map("offer_id")
+  channel   String
+  accountId String    @default("default") @map("account_id")
+  sentAt    DateTime? @map("sent_at")
+  messageId String?   @map("message_id")
+  error     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  offer     Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, channel, accountId])
+  @@index([channel, sentAt])
+  @@index([accountId, channel, sentAt])
+  @@map("offer_deliveries")
+}
+
+/// Mensagens automáticas (bom dia, código promocional, etc.) — independentes de ofertas.
+model AutoMessage {
+  id           String    @id @default(cuid())
+  title        String
+  content      String
+  /// manual = só envia ao clicar; once = programada uma vez; daily = todo dia no horário
+  scheduleType String    @default("manual") @map("schedule_type")
+  scheduledAt  DateTime? @map("scheduled_at")
+  dailyHour      Int?      @map("daily_hour")
+  dailyMinute    Int?      @default(0) @map("daily_minute")
+  enabled        Boolean   @default(true)
+  lastSentAt     DateTime? @map("last_sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("auto_messages")
+}
+
+/// Conta de envio ou sessão (WhatsApp, Telegram, Mercado Livre afiliado).
+/// O mesmo `id` (ex.: default) pode existir em plataformas diferentes.
+model Account {
+  id        String
+  platform  String
+  label     String
+  enabled   Boolean  @default(true)
+  config    Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([id, platform])
+  @@index([platform, enabled])
+  @@map("accounts")
+}
+
+/// Usuário do painel / API REST (autenticação JWT).
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}

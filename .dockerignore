@@ -1,0 +1,9 @@
+node_modules
+build
+.git
+.env
+data
+*.md
+.cursor
+.claude
+terminals
