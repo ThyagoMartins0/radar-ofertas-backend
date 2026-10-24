@@ -54,7 +54,21 @@ ENV NODE_ENV=production \
     API_PORT=3001 \
     SKIP_MIGRATIONS=true \
     MANAGER_CAN_SPAWN_WORKERS=false \
-    MANAGER_VNC_ENABLED=false
+    MANAGER_VNC_ENABLED=false \
+    APP_TIMEZONE=America/Sao_Paulo \
+    API_CORS_ORIGINS=https://rdofertas.simplapp.com.br \
+    MYSQL_DOCKER_HOST=13.140.228.143 \
+    MYSQL_PORT=3560 \
+    MYSQL_USER=mlu-s-db-link@ \
+    MYSQL_DATABASE=ml-db-link-banco \
+    REDIS_ENABLED=false \
+    REDIS_URL=redis://redis:6379 \
+    WHATSAPP_AUTH_PATH=/app/data/auth_info_baileys \
+    ML_AUTH_PATH=/app/data/ml_auth
+
+# Segredos (MYSQL_PASSWORD, JWT_SECRET, API_ADMIN_PASSWORD) ficam no Environment do Dokploy.
+
+RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/BUILD_TIME
 
 COPY backend ./backend
 COPY docker ./docker

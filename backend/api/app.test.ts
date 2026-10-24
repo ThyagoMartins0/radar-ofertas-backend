@@ -13,10 +13,9 @@ describe('API probe', () => {
     const response = await app.inject({ method: 'GET', url: '/' });
 
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), {
-      status: 'ok',
-      service: 'radar-ofertas-api',
-    });
+    const body = response.json();
+    assert.equal(body.status, 'ok');
+    assert.equal(body.service, 'radar-ofertas-api');
 
     await app.close();
   });

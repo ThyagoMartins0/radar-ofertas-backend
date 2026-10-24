@@ -11,6 +11,7 @@ import {
 type HealthBody = {
   status: 'ok' | 'degraded';
   database: 'ok' | 'error';
+  databaseError?: string;
   processes?: {
     collector: ProcessHealthSnapshot;
     worker: ProcessHealthSnapshot;
@@ -18,17 +19,27 @@ type HealthBody = {
   timestamp: string;
 };
 
-async function pingDatabase(): Promise<'ok' | 'error'> {
+/** Motivo do erro sem senha — ajuda a diagnosticar o deploy (host/usuário/permissão). */
+function describeDatabaseError(error: unknown): string {
+  const { errorCode, code } = (error ?? {}) as { errorCode?: string; code?: string };
+  const prismaCode = errorCode ?? code;
+  const message = error instanceof Error ? error.message : String(error);
+  const firstLine = message.split('\n').map((line) => line.trim()).filter(Boolean).pop() ?? '';
+  return [prismaCode, firstLine.slice(0, 300)].filter(Boolean).join(': ');
+}
+
+async function pingDatabase(): Promise<{ status: 'ok' | 'error'; error?: string }> {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return 'ok';
-  } catch {
-    return 'error';
+    return { status: 'ok' };
+  } catch (error) {
+    return { status: 'error', error: describeDatabaseError(error) };
   }
 }
 
 export async function healthHandler(_request: unknown, reply: FastifyReply): Promise<void> {
-  const database = await pingDatabase();
+  const ping = await pingDatabase();
+  const database = ping.status;
   const [collector, worker] = await Promise.all([
     getCollectorHealthSnapshot(),
     getWorkerHealthSnapshot(),
@@ -37,6 +48,7 @@ export async function healthHandler(_request: unknown, reply: FastifyReply): Pro
   const body: HealthBody = {
     status: database === 'ok' ? 'ok' : 'degraded',
     database,
+    ...(ping.error ? { databaseError: ping.error } : {}),
     processes: { collector, worker },
     timestamp: new Date().toISOString(),
   };

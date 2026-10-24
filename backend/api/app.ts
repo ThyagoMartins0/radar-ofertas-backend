@@ -1,6 +1,7 @@
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
+import { readFileSync } from 'node:fs';
 
 import { env } from '../src/config/env.js';
 import { registerErrorHandler } from './plugins/error-handler.js';
@@ -13,6 +14,17 @@ const DEFAULT_PANEL_ORIGINS = [
   'http://127.0.0.1:3000',
   'https://rdofertas.simplapp.com.br',
 ];
+
+/** Gravado no Dockerfile — confirma se o deploy novo subiu. */
+function readBuildTime(): string | null {
+  try {
+    return readFileSync('/app/BUILD_TIME', 'utf8').trim();
+  } catch {
+    return null;
+  }
+}
+
+const BUILD_TIME = readBuildTime();
 
 function resolveCorsOrigins(): string[] {
   return [...new Set([...DEFAULT_PANEL_ORIGINS, ...env.API_CORS_ORIGINS])];
@@ -55,6 +67,7 @@ export async function buildApiApp() {
   app.get('/', async () => ({
     status: 'ok' as const,
     service: 'radar-ofertas-api',
+    build: BUILD_TIME,
   }));
 
   return app;
