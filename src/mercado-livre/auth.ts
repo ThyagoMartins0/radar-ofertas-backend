@@ -53,16 +53,15 @@ export async function openAffiliateLoginSession(
 
   const { browser, usesCdp } = await launchMercadoLivreLoginBrowser(mode);
 
+  // Câmera liberada para o reconhecimento facial do ML (só funciona no login local: `npm run ml:login`).
+  const contextOptions = {
+    userAgent: env.ML_SCRAPER_USER_AGENT,
+    locale: 'pt-BR',
+    permissions: ['camera'],
+  };
   const context = usesCdp
-    ? (browser.contexts()[0] ??
-      (await browser.newContext({
-        userAgent: env.ML_SCRAPER_USER_AGENT,
-        locale: 'pt-BR',
-      })))
-    : await browser.newContext({
-        userAgent: env.ML_SCRAPER_USER_AGENT,
-        locale: 'pt-BR',
-      });
+    ? (browser.contexts()[0] ?? (await browser.newContext(contextOptions)))
+    : await browser.newContext(contextOptions);
 
   const page = await context.newPage();
 
