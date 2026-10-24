@@ -47,7 +47,7 @@ Opcional: apps separados para `src/app.ts` (collector) e `src/scheduler.ts` (age
 | `MYSQL_HOST=localhost` `MYSQL_PORT=3360` | `MYSQL_DOCKER_HOST=<Internal Host>` `MYSQL_PORT=3306` |
 | `REDIS_URL=redis://localhost:6379` | `REDIS_URL=redis://<Internal Host>:6379` |
 | `API_CORS_ORIGINS=http://localhost:5173,...` | `API_CORS_ORIGINS=https://rdofertas.simplapp.com.br` |
-| `MANAGER_VNC_ENABLED=true` | `MANAGER_VNC_ENABLED=false` (Xvfb falhando = 502) |
+| `MANAGER_VNC_ENABLED=true` | `MANAGER_VNC_ENABLED=false` (ligue só para o login ML — ver abaixo) |
 
 Copie `.env.dokploy.example`. No serviço MySQL/Redis do Dokploy, use o **Internal Host**.
 
@@ -57,7 +57,19 @@ Obrigatório para o processo não morrer na subida (502):
 - `MYSQL_*` + `MYSQL_DOCKER_HOST` (porta **3306** na rede interna)
 - `REDIS_URL` + `REDIS_ENABLED=true` (Redis no Dokploy, não localhost)
 - `API_CORS_ORIGINS=https://rdofertas.simplapp.com.br`
-- `MANAGER_VNC_ENABLED=false`
+
+## Login do Mercado Livre (noVNC)
+
+A sessão de afiliado fica no MySQL (tabela `ml_sessions`), mas o login precisa de um navegador visível dentro do container da API:
+
+1. Rode `src/database/schema.sql` no banco (cria `ml_sessions` se ainda não existir).
+2. No **Environment** da API: `MANAGER_VNC_ENABLED=true` e `MANAGER_VNC_PASSWORD=<senha forte>`. Sem senha, em produção o noVNC não sobe.
+3. Em **Domains**, adicione um domínio (ex.: `vnc-backlmbot.simplapp.com.br`) com **Container Port 6080** e HTTPS ligado.
+4. Redeploy. Abra `https://<dominio-vnc>/vnc_lite.html?scale=true&path=websockify` e informe a senha.
+5. No painel, clique em **Logar** (Contas → Mercado Livre); o Chrome aparece na tela do noVNC. Faça o login e conclua no painel.
+6. Depois: `MANAGER_VNC_ENABLED=false`, remova o domínio da porta 6080 e faça redeploy. A sessão continua no banco.
+
+Se o Xvfb falhar, a API sobe mesmo assim (sem noVNC) — veja `[api-vnc]` nos logs.
 
 ## Conferir
 

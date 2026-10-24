@@ -14,7 +14,17 @@ wait_for_display() {
   return 1
 }
 
+vnc_enabled=false
 if [ "$MANAGER_VNC_ENABLED" = "true" ] || [ "$MANAGER_VNC_ENABLED" = "1" ]; then
+  vnc_enabled=true
+  # noVNC exposto sem senha = qualquer um controla o navegador logado no ML.
+  if [ -z "$MANAGER_VNC_PASSWORD" ] && [ "$NODE_ENV" = "production" ]; then
+    echo "[api-vnc] AVISO: MANAGER_VNC_PASSWORD vazio em produção — noVNC NÃO iniciado. Defina a senha e faça redeploy."
+    vnc_enabled=false
+  fi
+fi
+
+if [ "$vnc_enabled" = "true" ]; then
   export DISPLAY="${MANAGER_VNC_DISPLAY:-:99}"
   XVFB_W="${MANAGER_VNC_WIDTH:-1280}"
   XVFB_H="${MANAGER_VNC_HEIGHT:-720}"
@@ -35,10 +45,12 @@ if [ "$MANAGER_VNC_ENABLED" = "true" ] || [ "$MANAGER_VNC_ENABLED" = "1" ]; then
   Xvfb "$DISPLAY" -screen 0 "${XVFB_W}x${XVFB_H}x${XVFB_DEPTH}" -ac +extension GLX +render -noreset &
   XVFB_PID=$!
 
+  # Falha do Xvfb não derruba a API (evita 502): sobe sem navegador visível.
   if ! wait_for_display "$DISPLAY"; then
-    echo "[api-vnc] ERRO: Xvfb não respondeu em $DISPLAY — verifique logs do container"
+    echo "[api-vnc] ERRO: Xvfb não respondeu em $DISPLAY — API sobe sem noVNC (login ML pelo painel indisponível)"
     kill "$XVFB_PID" 2>/dev/null || true
-    exit 1
+    unset DISPLAY
+    exec "$@"
   fi
   echo "[api-vnc] Xvfb pronto em $DISPLAY"
 

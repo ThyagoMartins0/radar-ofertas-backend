@@ -2,21 +2,21 @@ import { chromium, type Browser } from 'playwright';
 
 import { env } from '../config/env.js';
 
-export const ML_LOGIN_HOST_INSTRUCTIONS =
-  'No Docker o painel não abre navegador dentro do container. No host, rode: npm run ml:login — a sessão fica em ./data/ml_auth e é compartilhada com os containers.';
+export const ML_LOGIN_VNC_INSTRUCTIONS =
+  'O login do Mercado Livre precisa de um navegador visível no servidor (noVNC). No Environment da API defina MANAGER_VNC_ENABLED=true e MANAGER_VNC_PASSWORD, adicione um domínio apontando para a porta 6080 do container, faça redeploy e abra https://SEU-DOMINIO-VNC/vnc_lite.html?scale=true&path=websockify. Depois clique em Logar no painel e conclua o login na tela do noVNC — a sessão é salva no banco (tabela ml_sessions).';
 
 export const ML_LOGIN_CDP_INSTRUCTIONS =
-  'Alternativa: defina ML_LOGIN_CDP_URL=http://host.docker.internal:9222 no .env, abra o Chrome com --remote-debugging-port=9222 e tente de novo pelo painel.';
+  'Alternativa: com um Chrome aberto com --remote-debugging-port=9222 acessível pelo servidor, defina ML_LOGIN_CDP_URL com o endereço dele e tente de novo pelo painel.';
 
-export const ML_LOGIN_VNC_INSTRUCTIONS =
-  'Com noVNC: MANAGER_VNC_ENABLED=true, rebuild do serviço api, abra http://localhost:6080/vnc_lite.html?scale=true&path=websockify e use Logar no painel.';
+export const ML_LOGIN_HOST_INSTRUCTIONS =
+  'Fora do Docker também dá para rodar npm run ml:login numa máquina com o mesmo .env — a sessão vai para o mesmo banco.';
 
 export function hasVirtualDisplay(): boolean {
   return Boolean(process.env.DISPLAY?.trim());
 }
 
 export function getMercadoLivrePanelLoginHelp(): string {
-  return `${ML_LOGIN_HOST_INSTRUCTIONS}\n\n${ML_LOGIN_VNC_INSTRUCTIONS}\n\n${ML_LOGIN_CDP_INSTRUCTIONS}`;
+  return `${ML_LOGIN_VNC_INSTRUCTIONS}\n\n${ML_LOGIN_CDP_INSTRUCTIONS}\n\n${ML_LOGIN_HOST_INSTRUCTIONS}`;
 }
 
 /** Login pelo painel exige navegador visível ou Chrome via CDP no host. */
