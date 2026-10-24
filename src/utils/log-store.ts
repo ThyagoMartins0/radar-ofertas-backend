@@ -56,7 +56,16 @@ export interface LogFilters {
 const memoryBuffer: LogEntry[] = [];
 let memoryScrapeCount = 0;
 let redisClient: Redis | null = null;
-let redisFailed = false;
+let redisConnecting: Promise<void> | null = null;
+/** Pausa após falha — antes era permanente: um connect() concorrente no boot ("already
+ * connecting") desligava o Redis do processo para sempre e os logs de collector/worker
+ * nunca chegavam ao painel. */
+let redisRetryAt = 0;
+const REDIS_RETRY_COOLDOWN_MS = 30_000;
+
+function markRedisFailed(): void {
+  redisRetryAt = Date.now() + REDIS_RETRY_COOLDOWN_MS;
+}
 
 const logEmitter = new EventEmitter();
 logEmitter.setMaxListeners(100);
@@ -98,18 +107,39 @@ function detectProcessSource(): LogSource {
 const processSource = detectProcessSource();
 
 function getRedis(): Redis | null {
-  if (!env.REDIS_ENABLED || redisFailed) return null;
+  if (!env.REDIS_ENABLED || Date.now() < redisRetryAt) return null;
   if (!redisClient) {
     redisClient = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
       enableOfflineQueue: false,
     });
-    redisClient.on('error', () => {
-      redisFailed = true;
-    });
+    redisClient.on('error', markRedisFailed);
   }
   return redisClient;
+}
+
+/** Cliente pronto para comandos, ou null. Um único connect() compartilhado entre chamadas. */
+async function getReadyRedis(): Promise<Redis | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  if (redis.status === 'ready') return redis;
+
+  // 'wait' = lazyConnect ainda não conectou; nos demais estados o ioredis reconecta sozinho.
+  if (redis.status === 'wait' || redis.status === 'end') {
+    redisConnecting ??= redis.connect().finally(() => {
+      redisConnecting = null;
+    });
+  }
+
+  try {
+    if (redisConnecting) await redisConnecting;
+  } catch {
+    markRedisFailed();
+    return null;
+  }
+  // status muda durante o await — o narrowing do TS não enxerga isso.
+  return (redis.status as string) === 'ready' ? redis : null;
 }
 
 function extractMeta(record: Record<string, unknown>): Record<string, unknown> {
@@ -147,13 +177,10 @@ function pushToMemory(entry: LogEntry): void {
 }
 
 async function pushToRedis(entry: LogEntry): Promise<void> {
-  const redis = getRedis();
+  const redis = await getReadyRedis();
   if (!redis) return;
 
   try {
-    if (redis.status !== 'ready') {
-      await redis.connect();
-    }
     const payload = JSON.stringify(entry);
     await redis
       .multi()
@@ -161,23 +188,20 @@ async function pushToRedis(entry: LogEntry): Promise<void> {
       .ltrim(REDIS_KEY, 0, MAX_LOGS - 1)
       .exec();
   } catch {
-    redisFailed = true;
+    markRedisFailed();
   }
 }
 
 async function incrementMlScrapeCount(): Promise<void> {
   memoryScrapeCount++;
 
-  const redis = getRedis();
+  const redis = await getReadyRedis();
   if (!redis) return;
 
   try {
-    if (redis.status !== 'ready') {
-      await redis.connect();
-    }
     await redis.incr(SCRAPE_COUNT_KEY);
   } catch {
-    redisFailed = true;
+    markRedisFailed();
   }
 }
 
@@ -206,13 +230,10 @@ function matchesFilters(entry: LogEntry, filters: LogFilters): boolean {
 }
 
 async function readFromRedis(limit: number): Promise<LogEntry[]> {
-  const redis = getRedis();
+  const redis = await getReadyRedis();
   if (!redis) return [];
 
   try {
-    if (redis.status !== 'ready') {
-      await redis.connect();
-    }
     const raw = await redis.lrange(REDIS_KEY, 0, limit - 1);
     return raw
       .map((line) => {
@@ -224,7 +245,7 @@ async function readFromRedis(limit: number): Promise<LogEntry[]> {
       })
       .filter((entry): entry is LogEntry => entry != null);
   } catch {
-    redisFailed = true;
+    markRedisFailed();
     return [];
   }
 }
@@ -253,19 +274,16 @@ export async function countMlScrapeLogs(): Promise<number> {
   const fromLogs = all.filter(isMlScrapeCountEntry).length;
   let redisCount: number | null = null;
 
-  const redis = getRedis();
+  const redis = await getReadyRedis();
   if (redis) {
     try {
-      if (redis.status !== 'ready') {
-        await redis.connect();
-      }
       const raw = await redis.get(SCRAPE_COUNT_KEY);
       if (raw != null) {
         const parsed = Number.parseInt(raw, 10);
         if (!Number.isNaN(parsed)) redisCount = parsed;
       }
     } catch {
-      redisFailed = true;
+      markRedisFailed();
     }
   }
 
