@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { formatAmazonCouponLabel, parseAmazonListingHtml, parseAmazonProductHtml } from './parser.js';
-import { validateAmazonSourceConfig } from './source-url.js';
+import { isAmazonSourceUrl, validateAmazonSourceConfig } from './source-url.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -74,6 +74,13 @@ describe('amazon source-url', () => {
     const result = validateAmazonSourceConfig('https://www.amazon.com.br/b/node/122326793011');
     assert.equal(result.valid, true);
     assert.equal(result.kind, 'browse_node');
+  });
+
+  it('não trata categoria ML solta como fonte Amazon', () => {
+    assert.equal(isAmazonSourceUrl('MLB1648'), false);
+    assert.equal(isAmazonSourceUrl('https://lista.mercadolivre.com.br/_CategoryId_MLB1648'), false);
+    assert.equal(isAmazonSourceUrl('https://www.amazon.com.br/b/node/122326793011'), true);
+    assert.equal(isAmazonSourceUrl('B01LKZ0Q20'), true);
   });
 
   it('valida produto por /dp/', () => {

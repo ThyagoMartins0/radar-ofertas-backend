@@ -8,7 +8,7 @@ import {
   hydrateQueueConfigCache,
 } from '../config/queue-config-store.js';
 import { hydrateIntegrationState } from '../channels/integration-state.js';
-import { closeBrowserPool } from '../mercado-livre/browser-pool.js';
+import { releaseBrowserPool } from '../mercado-livre/browser-pool.js';
 import { collectFromSource, orchestrateOfferCollection } from '../offers/service.js';
 import { getQueueConnection, QUEUE_NAMES, type CollectorJobData } from '../queue/index.js';
 import { isWithinOperatingHours } from '../utils/datetime.js';
@@ -56,7 +56,7 @@ export function startCollectorWorker(): Worker<CollectorJobData> {
           );
           return result;
         } finally {
-          await closeBrowserPool();
+          await releaseBrowserPool();
         }
       }
 

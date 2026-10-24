@@ -35,6 +35,11 @@ export function isAmazonSourceUrl(input: string): boolean {
 
   if (extractAmazonAsin(trimmed)) return true;
 
+  // Texto solto (ex.: categoria ML "MLB1648") não é Amazon — normalizeAmazonUrl prefixaria
+  // amazon.com.br e o hostname "confirmaria" a fonte como Amazon.
+  const looksLikeUrl = /^https?:\/\//i.test(trimmed) || trimmed.startsWith('/') || /amazon\./i.test(trimmed);
+  if (!looksLikeUrl) return false;
+
   try {
     const url = normalizeAmazonUrl(trimmed);
     const parsed = new URL(url);

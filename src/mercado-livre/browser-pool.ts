@@ -13,6 +13,8 @@ const IDLE_CLOSE_MS = 60_000;
 let browser: Browser | null = null;
 let idleTimer: NodeJS.Timeout | undefined;
 let operationChain: Promise<unknown> = Promise.resolve();
+/** Operações enfileiradas ou em execução — o fim de um job não pode fechar o browser de outro. */
+let pendingOperations = 0;
 
 async function ensureBrowser(): Promise<Browser> {
   if (browser?.isConnected()) return browser;
@@ -38,6 +40,18 @@ export async function closeBrowserPool(): Promise<void> {
   await browser.close().catch(() => {});
   browser = null;
   logger.debug('Playwright browser pool closed');
+}
+
+/**
+ * Fim de job de coleta: fecha o Chromium só se nenhum outro job (concorrência do
+ * collector) estiver usando — senão o idle close cuida dele depois.
+ */
+export async function releaseBrowserPool(): Promise<void> {
+  if (pendingOperations > 0) {
+    scheduleIdleClose();
+    return;
+  }
+  await closeBrowserPool();
 }
 
 export interface PooledContextOptions {
@@ -73,7 +87,10 @@ export async function withPooledBrowserContext<T>(
     }
   };
 
-  const result = operationChain.then(run, run);
+  pendingOperations++;
+  const result = operationChain.then(run, run).finally(() => {
+    pendingOperations--;
+  });
   operationChain = result.then(
     () => undefined,
     () => undefined,
