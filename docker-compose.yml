@@ -12,7 +12,7 @@ x-app-environment: &app-environment
   APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
   REDIS_ENABLED: "true"
   TELEGRAM_ENABLED: "false"
-  # DATABASE_URL: montada por backend/src/bootstrap-env.ts a partir de MYSQL_*
+  # DATABASE_URL: montada por src/bootstrap-env.ts a partir de MYSQL_*
   REDIS_URL: redis://redis:6379
   MYSQL_DOCKER_HOST: ${MYSQL_DOCKER_HOST:-mysql}
   REDIS_DOCKER_HOST: redis
@@ -101,7 +101,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command:
-      ["npx", "tsx", "--import", "./backend/src/bootstrap-env.ts", "backend/src/scripts/migrate-deploy.ts"]
+      ["npx", "tsx", "--import", "./src/bootstrap-env.ts", "src/scripts/migrate-deploy.ts"]
     depends_on:
       mysql:
         condition: service_healthy
@@ -113,15 +113,15 @@ services:
         "npx",
         "tsx",
         "--import",
-        "./backend/src/bootstrap-env.ts",
-        "backend/src/app.ts",
+        "./src/bootstrap-env.ts",
+        "src/app.ts",
       ]
     environment:
       <<: *app-environment
       SKIP_MIGRATIONS: "true"
     volumes:
       - ./data:/app/data
-      - ./backend/src:/app/backend/src
+      - ./src:/app/src
 
   scheduler:
     <<: *app-base
@@ -130,15 +130,15 @@ services:
         "npx",
         "tsx",
         "--import",
-        "./backend/src/bootstrap-env.ts",
-        "backend/src/scheduler.ts",
+        "./src/bootstrap-env.ts",
+        "src/scheduler.ts",
       ]
     environment:
       <<: *app-environment
       SKIP_MIGRATIONS: "true"
     volumes:
       - ./data:/app/data
-      - ./backend/src:/app/backend/src
+      - ./src:/app/src
 
   worker:
     <<: *app-base
@@ -147,8 +147,8 @@ services:
         "npx",
         "tsx",
         "--import",
-        "./backend/src/bootstrap-env.ts",
-        "backend/src/worker.ts",
+        "./src/bootstrap-env.ts",
+        "src/worker.ts",
       ]
     environment:
       <<: *app-environment
@@ -156,7 +156,7 @@ services:
     restart: on-failure
     volumes:
       - ./data:/app/data
-      - ./backend/src:/app/backend/src
+      - ./src:/app/src
 
   api:
     <<: *app-base
@@ -166,8 +166,8 @@ services:
         "npx",
         "tsx",
         "--import",
-        "./backend/src/bootstrap-env.ts",
-        "backend/api/server.ts",
+        "./src/bootstrap-env.ts",
+        "api/server.ts",
       ]
     ports:
       - "${API_PORT:-3001}:3001"

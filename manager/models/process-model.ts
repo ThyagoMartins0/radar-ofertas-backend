@@ -8,7 +8,7 @@ import { logger } from '../../src/utils/logger.js';
 
 const SPAWN_DISABLED_DETAIL =
   'Worker gerenciado externamente — use Docker ou npm run worker no terminal.';
-const WORKER_SCRIPT = 'backend/src/worker.ts';
+const WORKER_SCRIPT = 'src/worker.ts';
 
 export function canManagerSpawnWorkers(): boolean {
   return env.MANAGER_CAN_SPAWN_WORKERS;

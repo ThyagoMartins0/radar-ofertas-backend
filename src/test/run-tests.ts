@@ -2,8 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 
-const root = path.resolve(import.meta.dirname, '../../..');
-const roots = [path.join(root, 'backend')];
+const root = path.resolve(import.meta.dirname, '../..');
+const roots = ['src', 'api', 'manager'].map((d) => path.join(root, d));
 const skipDirs = new Set(['node_modules', 'build', '.git']);
 
 function findTestFiles(dir: string): string[] {
@@ -39,7 +39,7 @@ const result = spawnSync(
     '--import',
     'tsx',
     '--import',
-    './backend/src/test/preload.ts',
+    './src/test/preload.ts',
     '--test',
     '--test-concurrency=1',
     ...files,

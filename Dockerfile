@@ -26,7 +26,7 @@ FROM base AS deps
 ENV NODE_ENV=development
 
 COPY package.json package-lock.json tsconfig.json ./
-COPY backend/prisma ./backend/prisma
+COPY prisma ./prisma
 
 RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" \
     && git config --global url."https://github.com/".insteadOf "git@github.com:" \
@@ -70,7 +70,9 @@ ENV NODE_ENV=production \
 
 RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/BUILD_TIME
 
-COPY backend ./backend
+COPY src ./src
+COPY api ./api
+COPY manager ./manager
 COPY docker ./docker
 
 RUN sed -i 's/\r$//' /app/docker/api-entrypoint.sh \
@@ -79,7 +81,7 @@ RUN sed -i 's/\r$//' /app/docker/api-entrypoint.sh \
 EXPOSE 80 3001
 
 ENTRYPOINT ["/app/docker/api-entrypoint.sh"]
-CMD ["npx", "tsx", "--import", "./backend/src/bootstrap-env.ts", "backend/api/server.ts"]
+CMD ["npx", "tsx", "--import", "./src/bootstrap-env.ts", "api/server.ts"]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.API_PORT||3001)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

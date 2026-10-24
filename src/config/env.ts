@@ -136,7 +136,7 @@ const envSchema = z
       .transform((val) => val === 'true' || val === '1'),
     /** Porta HTTP do noVNC publicada no host. */
     MANAGER_NOVNC_PORT: z.coerce.number().int().positive().default(6080),
-    /** Porta da API REST (backend/api). */
+    /** Porta da API REST (api/). */
     API_PORT: z.coerce.number().int().positive().default(3001),
     /** Segredo HS256 para access/refresh JWT. Obrigatório quando a API sobe. */
     JWT_SECRET: z.string().min(32).optional(),

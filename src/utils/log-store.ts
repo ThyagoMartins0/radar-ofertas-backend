@@ -88,7 +88,7 @@ function isMlScrapeCountEntry(entry: LogEntry): boolean {
 
 function detectProcessSource(): LogSource {
   const entry = process.argv[1]?.replace(/\\/g, '/') ?? '';
-  if (entry.includes('/backend/api/')) return 'api';
+  if (entry.includes('/api/')) return 'api';
   if (entry.includes('/manager/')) return 'manager';
   if (entry.includes('worker')) return 'worker';
   if (entry.includes('app.ts') || entry.includes('app.js')) return 'collector';

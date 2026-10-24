@@ -2,7 +2,7 @@
 -- Banco Dokploy: ml-db-link-banco (usuário mix-s-db-link02)
 --
 -- Importe pelo painel (SQL) ou CLI:
---   mysql -h HOST -P 3360 -u mix-s-db-link02 -p ml-db-link-banco < backend/prisma/mysql/import.sql
+--   mysql -h HOST -P 3360 -u mix-s-db-link02 -p ml-db-link-banco < prisma/mysql/import.sql
 --
 -- No Dokploy o banco já existe — não rode CREATE DATABASE abaixo.
 
@@ -15,7 +15,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 USE `ml-db-link-banco`;
 
 -- ---------------------------------------------------------------------------
--- Tabelas de aplicação (espelham backend/prisma/schema.prisma)
+-- Tabelas de aplicação (espelham prisma/schema.prisma)
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS `settings` (

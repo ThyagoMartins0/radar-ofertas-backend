@@ -15,7 +15,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    files: ['backend/**/*.ts'],
+    files: ['{src,api,manager}/**/*.ts'],
     ignores: ['**/*.test.ts'],
     languageOptions: {
       parserOptions: {
