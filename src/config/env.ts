@@ -144,6 +144,11 @@ const envSchema = z
       .transform((val) => val === 'true' || val === '1'),
     /** Porta HTTP do noVNC publicada no host. */
     MANAGER_NOVNC_PORT: z.coerce.number().int().positive().default(6080),
+    /**
+     * URL pública do viewer noVNC (domínio Dokploy na porta 6080 do container).
+     * Ex.: https://vnc-backlmbot.simplapp.com.br — o painel não usa a porta no hostname do frontend.
+     */
+    MANAGER_NOVNC_PUBLIC_URL: z.string().default(''),
     /** Porta da API REST (api/). */
     API_PORT: z.coerce.number().int().positive().default(3001),
     /** Segredo HS256 para access/refresh JWT. Obrigatório quando a API sobe. */

@@ -33,6 +33,7 @@ export function serializeSettings(data: SettingsData) {
       canSpawnWorkers: data.canSpawnWorkers,
     },
     novncPort: data.novncPort,
+    novncUrl: data.novncUrl,
     mlCouponsUrl: data.mlCouponsUrl,
     amazonAffiliate: {
       baseUrl: data.amazonBaseUrl,

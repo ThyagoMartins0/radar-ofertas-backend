@@ -22,7 +22,7 @@ import {
   getWhatsAppSessionStatusForAuthPath,
 } from './session-model.js';
 import { canManagerSpawnWorkers } from './process-model.js';
-import { resolveNovncPort } from '../../src/config/novnc.js';
+import { resolveNovncPort, resolveNovncPublicUrl } from '../../src/config/novnc.js';
 import { loadTelegramAccountView, saveTelegramAccountConfig } from './integration-model.js';
 import type { SaveResult } from './shared/save-result.js';
 import {
@@ -77,6 +77,7 @@ export interface AccountsPageData {
   marketplacePlatforms: { id: AccountPlatform; label: string }[];
   canSpawnWorkers: boolean;
   novncPort: number | null;
+  novncUrl: string | null;
   saved: string | null;
   error: string | null;
   openConfigAccountId: string | null;
@@ -242,6 +243,7 @@ export async function loadAccountsData(
     marketplacePlatforms: platformOptions(MARKETPLACE_PLATFORMS),
     canSpawnWorkers: canManagerSpawnWorkers(),
     novncPort: resolveNovncPort(),
+    novncUrl: resolveNovncPublicUrl(),
     saved,
     error,
     openConfigAccountId,

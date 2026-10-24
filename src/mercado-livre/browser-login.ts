@@ -3,7 +3,7 @@ import { chromium, type Browser } from 'playwright';
 import { env } from '../config/env.js';
 
 export const ML_LOGIN_VNC_INSTRUCTIONS =
-  'O login do Mercado Livre precisa de um navegador visível no servidor (noVNC). No Environment da API defina MANAGER_VNC_ENABLED=true e MANAGER_VNC_PASSWORD, adicione um domínio apontando para a porta 6080 do container, faça redeploy e abra https://SEU-DOMINIO-VNC/vnc_lite.html?scale=true&path=websockify. Depois clique em Logar no painel e conclua o login na tela do noVNC — a sessão é salva no banco (tabela ml_sessions).';
+  'O login do Mercado Livre precisa de um navegador visível no servidor (noVNC). No Environment da API defina MANAGER_VNC_ENABLED=true, MANAGER_VNC_PASSWORD e MANAGER_NOVNC_PUBLIC_URL=https://SEU-DOMINIO-VNC (domínio Dokploy na porta 6080 do container). Faça redeploy da API e do painel, abra o link noVNC e conclua o login — a sessão é salva no banco (tabela ml_sessions).';
 
 export const ML_LOGIN_CDP_INSTRUCTIONS =
   'Alternativa: com um Chrome aberto com --remote-debugging-port=9222 acessível pelo servidor, defina ML_LOGIN_CDP_URL com o endereço dele e tente de novo pelo painel.';

@@ -32,7 +32,7 @@ import {
   saveCouponsUrl,
 } from '../../src/config/coupons-config-store.js';
 import { env } from '../../src/config/env.js';
-import { resolveNovncPort } from '../../src/config/novnc.js';
+import { resolveNovncPort, resolveNovncPublicUrl } from '../../src/config/novnc.js';
 import { isWithinOperatingHours } from '../../src/utils/datetime.js';
 import { isRedisEnabled, rescheduleCollectorJob } from '../../src/queue/index.js';
 import {
@@ -93,6 +93,7 @@ export interface SettingsData {
   senderWorker: AccountWorkerState;
   canSpawnWorkers: boolean;
   novncPort: number | null;
+  novncUrl: string | null;
   mlCouponsUrl: string;
   amazonBaseUrl: string;
   amazonAffiliateLinkPrefix: string;
@@ -160,6 +161,7 @@ export async function loadSettingsData(
     senderWorker,
     canSpawnWorkers: canManagerSpawnWorkers(),
     novncPort: resolveNovncPort(),
+    novncUrl: resolveNovncPublicUrl(),
     mlCouponsUrl,
     amazonBaseUrl: amazonConfig.baseUrl,
     amazonAffiliateLinkPrefix: amazonConfig.affiliateLinkPrefix,

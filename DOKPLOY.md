@@ -63,9 +63,9 @@ Obrigatório para o processo não morrer na subida (502):
 A sessão de afiliado fica no MySQL (tabela `ml_sessions`), mas o login precisa de um navegador visível dentro do container da API:
 
 1. Rode `src/database/schema.sql` no banco (cria `ml_sessions` se ainda não existir).
-2. No **Environment** da API: `MANAGER_VNC_ENABLED=true` e `MANAGER_VNC_PASSWORD=<senha forte>`. Sem senha, em produção o noVNC não sobe.
-3. Em **Domains**, adicione um domínio (ex.: `vnc-backlmbot.simplapp.com.br`) com **Container Port 6080** e HTTPS ligado.
-4. Redeploy. Abra `https://<dominio-vnc>/vnc_lite.html?scale=true&path=websockify` e informe a senha.
+2. No **Environment** da API: `MANAGER_VNC_ENABLED=true`, `MANAGER_VNC_PASSWORD=<senha forte>` e `MANAGER_NOVNC_PUBLIC_URL=https://<dominio-vnc>` (sem path). Sem senha, em produção o noVNC não sobe.
+3. Em **Domains**, adicione um domínio (ex.: `vnc-backlmbot.simplapp.com.br`) com **Container Port 6080** e HTTPS ligado — deve ser o mesmo host de `MANAGER_NOVNC_PUBLIC_URL`.
+4. Redeploy da **API** e do **painel**. O link noVNC no frontend usa essa URL (não abre `:6080` no domínio `rdofertas`).
 5. No painel, clique em **Logar** (Contas → Mercado Livre); o Chrome aparece na tela do noVNC. Faça o login e conclua no painel.
 6. Depois: `MANAGER_VNC_ENABLED=false`, remova o domínio da porta 6080 e faça redeploy. A sessão continua no banco.
 

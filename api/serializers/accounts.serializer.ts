@@ -8,5 +8,6 @@ export function serializeAccounts(data: AccountsPageData) {
     marketplacePlatforms: data.marketplacePlatforms,
     canSpawnWorkers: data.canSpawnWorkers,
     novncPort: data.novncPort,
+    novncUrl: data.novncUrl,
   };
 }

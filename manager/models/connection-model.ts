@@ -9,7 +9,7 @@ import {
 } from '../../src/mercado-livre/auth.js';
 import { setMlAuthPath } from '../../src/mercado-livre/session.js';
 import { DEFAULT_ACCOUNT_ID } from '../../src/accounts/types.js';
-import { resolveNovncPort } from '../../src/config/novnc.js';
+import { resolveNovncPort, resolveNovncPublicUrl } from '../../src/config/novnc.js';
 import { getWhatsAppConnectFromRedis, publishWhatsAppConnectState } from '../../src/utils/redis-state.js';
 import { requestWhatsAppConnect } from '../../src/whatsapp/connect-rpc.js';
 import { logger } from '../../src/utils/logger.js';
@@ -108,6 +108,7 @@ export interface MercadoLivreConnectState {
   status: MercadoLivreConnectStatus;
   error: string | null;
   novncPort: number | null;
+  novncUrl: string | null;
 }
 
 let mlStatus: MercadoLivreConnectStatus = 'idle';
@@ -123,7 +124,12 @@ async function resolveMercadoLivreAuthPath(accountId: string): Promise<string> {
 }
 
 export function getMercadoLivreConnectionState(): MercadoLivreConnectState {
-  return { status: mlStatus, error: mlError, novncPort: resolveNovncPort() };
+  return {
+    status: mlStatus,
+    error: mlError,
+    novncPort: resolveNovncPort(),
+    novncUrl: resolveNovncPublicUrl(),
+  };
 }
 
 async function closeMlSession(): Promise<void> {
